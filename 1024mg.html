@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>1024 - Dynamic Save</title>
+    <style>
+        :root { --primary: #38bdf8; --bg: #0f172a; --panel: #1e293b; --success: #22c55e; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; text-align: center; margin: 0; overflow: hidden; touch-action: none; user-select: none; }
+        .container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; position: relative; }
+
+        #instruction-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.98);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; padding: 20px; box-sizing: border-box;
+        }
+        .instruction-card {
+            background: var(--panel); padding: 2rem; border-radius: 1rem;
+            border: 2px solid var(--primary); max-width: 400px; width: 100%;
+        }
+        .instruction-card h2 { color: var(--primary); margin-top: 0; }
+        .instruction-card ul { text-align: left; line-height: 1.6; color: #cbd5e1; padding-left: 20px; }
+        .start-btn {
+            background: var(--success); color: white; border: none; padding: 12px 30px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; width: 100%; margin-top: 15px;
+        }
+
+        #game-board {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+            background: #334155; padding: 10px; border-radius: 12px;
+            width: 85vw; max-width: 380px; aspect-ratio: 1 / 1;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .tile {
+            background: #475569; border-radius: 8px; display: flex;
+            align-items: center; justify-content: center;
+            font-size: clamp(20px, 8vw, 28px); font-weight: bold;
+            aspect-ratio: 1 / 1; transition: transform 0.1s;
+        }
+        .tile-2 { background: #eee4da; color: #776e65; }
+        .tile-4 { background: #ede0c8; color: #776e65; }
+        .tile-8 { background: #f2b179; color: white; }
+        .tile-16 { background: #f59563; color: white; }
+        .tile-32 { background: #f67c5f; color: white; }
+        .tile-64 { background: #f65e3b; color: white; }
+        .tile-128 { background: #edcf72; color: white; font-size: clamp(16px, 6vw, 22px); }
+        .tile-256 { background: #edcc61; color: white; font-size: clamp(16px, 6vw, 22px); }
+        .tile-512 { background: #edc850; color: white; font-size: clamp(16px, 6vw, 22px); }
+        .tile-1024 { background: #edc53f; color: white; font-size: clamp(14px, 5vw, 18px); }
+        .btn-back {
+            margin-top: 25px; padding: 12px 30px; background: #f43f5e;
+            border: none; border-radius: 10px; color: white; font-weight: bold;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="instruction-overlay">
+        <div class="instruction-card">
+            <h2>1024 Manual</h2>
+            <ul>
+                <li>Use <b>Arrow Keys</b> or <b>Swipe</b> to move tiles.</li>
+                <li>When two tiles with the same number touch, they <b>merge into one!</b></li>
+                <li>Reach the <b>Target Score</b> to unlock the next level.</li>
+                <li>The game ends when the board is full and no moves are left.</li>
+            </ul>
+            <button class="start-btn" onclick="startGame()">START GAME</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div>
+            <h2 style="margin:0; color:var(--primary)">Score: <span id="score">0</span></h2>
+            <p id="goal-text">Target: 500</p>
+        </div>
+        <div id="game-board"></div>
+        <button class="btn-back" id="quit-btn">Quit & Save</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        window.startGame = function () {
+            document.getElementById("instruction-overlay").style.display = "none";
+        };
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
+            authDomain: "technoprenuership-4f49d.firebaseapp.com",
+            projectId: "technoprenuership-4f49d",
+            storageBucket: "technoprenuership-4f49d.firebasestorage.app",
+            messagingSenderId: "679400264773",
+            appId: "1:679400264773:web:f27707019e8bf8e9843f2c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser = null;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                alert("Not logged in!");
+                window.location.href = "Index.html";
+                return;
+            }
+            currentUser = user;
+        });
+
+        const params = new URLSearchParams(window.location.search);
+        const levelId = Number(params.get('id'));
+        const minGoal = parseInt(params.get('min')) || 500;
+
+        document.getElementById('goal-text').innerText = "Target: " + minGoal;
+
+        let board = Array(4).fill().map(() => Array(4).fill(0));
+        let score = 0;
+        let isSaving = false;
+
+        async function finish() {
+            if (isSaving) return;
+            isSaving = true;
+            document.getElementById('quit-btn').innerText = "Saving...";
+
+            if (!currentUser || !levelId) {
+                window.location.href = 'Index.html';
+                return;
+            }
+
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                const snap = await getDoc(userRef);
+
+                if (snap.exists()) {
+                    let d = snap.data();
+                    let s = d.scores || {};
+
+                    if (!s[levelId] || score > s[levelId]) {
+                        s[levelId] = score;
+                    }
+
+                    let currentUnlocked = Number(s.unlockedLevel || 1);
+
+                    if (score >= minGoal && currentUnlocked === levelId) {
+                        s.unlockedLevel = levelId + 1;
+                    } else {
+                        s.unlockedLevel = currentUnlocked;
+                    }
+
+                    await updateDoc(userRef, { scores: s });
+                }
+            } catch (e) {
+                console.error("Firebase Error:", e);
+            }
+
+            window.location.href = 'Index.html';
+        }
+
+        function addTile() {
+            let empty = [];
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (board[r][c] === 0) empty.push({ r, c });
+                }
+            }
+            if (empty.length) {
+                let { r, c } = empty[Math.floor(Math.random() * empty.length)];
+                board[r][c] = Math.random() > 0.1 ? 2 : 4;
+            }
+        }
+
+        function drawBoard() {
+            const container = document.getElementById('game-board');
+            container.innerHTML = '';
+            board.flat().forEach(val => {
+                const tile = document.createElement('div');
+                tile.className = `tile ${val ? 'tile-' + val : ''}`;
+                tile.innerText = val ? val : '';
+                container.appendChild(tile);
+            });
+            document.getElementById('score').innerText = score;
+            if (isOver() && !isSaving) {
+                alert("Game Over! Score: " + score);
+                finish();
+            }
+        }
+
+        function isOver() {
+            for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+                if (board[r][c] === 0) return false;
+                if (c < 3 && board[r][c] === board[r][c + 1]) return false;
+                if (r < 3 && board[r][c] === board[r + 1][c]) return false;
+            }
+            return true;
+        }
+
+        function move(dir) {
+            if (isSaving) return;
+            let old = JSON.stringify(board);
+
+            for (let i = 0; i < 4; i++) {
+                let row = (dir === 'left' || dir === 'right')
+                    ? board[i]
+                    : [board[0][i], board[1][i], board[2][i], board[3][i]];
+
+                if (dir === 'right' || dir === 'down') row.reverse();
+
+                let f = row.filter(v => v);
+                for (let j = 0; j < f.length - 1; j++) {
+                    if (f[j] === f[j + 1]) {
+                        f[j] *= 2;
+                        score += f[j];
+                        f[j + 1] = 0;
+                    }
+                }
+                f = f.filter(v => v);
+                while (f.length < 4) f.push(0);
+
+                if (dir === 'right' || dir === 'down') f.reverse();
+
+                if (dir === 'left' || dir === 'right') board[i] = f;
+                else for (let r = 0; r < 4; r++) board[r][i] = f[r];
+            }
+
+            if (old !== JSON.stringify(board)) {
+                addTile();
+                drawBoard();
+            }
+        }
+
+        document.getElementById('quit-btn').onclick = finish;
+        window.onkeydown = (e) => {
+            if (e.key.includes("Arrow")) move(e.key.replace("Arrow", "").toLowerCase());
+        };
+
+        let tX, tY;
+        document.ontouchstart = (e) => {
+            tX = e.touches[0].clientX;
+            tY = e.touches[0].clientY;
+        };
+        document.ontouchend = (e) => {
+            let dX = e.changedTouches[0].clientX - tX;
+            let dY = e.changedTouches[0].clientY - tY;
+            if (Math.max(Math.abs(dX), Math.abs(dY)) > 20) {
+                if (Math.abs(dX) > Math.abs(dY)) dX > 0 ? move('right') : move('left');
+                else dY > 0 ? move('down') : move('up');
+            }
+        };
+
+        addTile();
+        addTile();
+        drawBoard();
+    </script>
+</body>
+</html>

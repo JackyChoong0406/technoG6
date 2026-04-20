@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24 Game: Pro Scorer</title>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --success: #22c55e; --danger: #f43f5e; --warning: #f59e0b; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: var(--bg); color: white; overflow: hidden; }
+        .container { background: var(--card); padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 420px; position: relative; }
+        
+        .timer-box { font-size: 2.5rem; color: var(--danger); font-weight: 800; margin-bottom: 5px; }
+        .score-box { font-size: 1.5rem; color: var(--success); font-weight: bold; margin-bottom: 15px; }
+        .timer-paused { color: var(--warning); animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .display-area { background: #020617; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #334155; position: relative; }
+        #expressionText { font-size: 1.6rem; min-height: 1.8rem; color: var(--accent); margin-bottom: 10px; }
+        #liveResult { font-size: 1rem; color: #94a3b8; }
+
+        #pointsPop { position: absolute; top: -20px; right: 20px; color: var(--success); font-weight: bold; opacity: 0; transition: 0.5s; }
+
+        #overlay, #instructionOverlay, #resultOverlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.98);
+            border-radius: 20px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        #instructionOverlay { display: flex; text-align: left; }
+        #instructionOverlay h2 { color: var(--accent); margin-top: 0; text-align: center; width: 100%; }
+        .rules-list { font-size: 0.95rem; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px; }
+        .rules-list b { color: white; }
+
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 15px; }
+        .ops-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 20px; }
+
+        button { padding: 15px 5px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: 0.2s; }
+        .num-btn { background: var(--accent); color: var(--bg); font-size: 1.5rem; }
+        .num-btn:disabled { background: #334155; color: #64748b; opacity: 0.6; }
+        .op-btn { background: #6366f1; color: white; }
+        .control-btn { background: #475569; color: white; grid-column: span 2; }
+        .submit-btn { background: var(--success); color: white; grid-column: span 2; font-size: 1.3rem; }
+        .skip-btn { background: var(--warning); color: white; width: 100%; margin-top: 10px; }
+        .next-btn, .start-btn { background: var(--success); color: white; padding: 15px 40px; margin-top: 10px; font-size: 1.4rem; width: 80%; }
+
+        #resultTitle { color: var(--accent); margin-bottom: 10px; }
+        #finalScoreText { font-size: 2.2rem; font-weight: bold; color: var(--success); margin: 15px 0; }
+        #unlockText { color: #cbd5e1; text-align: center; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="instructionOverlay">
+        <h2>How to Play</h2>
+        <div class="rules-list">
+            • Use <b>all 4 numbers</b> to get exactly <b>24</b>.<br>
+            • You can use <b>+ , − , × , ÷</b> and <b>brackets</b>.<br>
+            • <b>Submit:</b> +50 points & +3s time.<br>
+            • <b>Skip:</b> Reveals answer but costs <b>3s</b>.<br>
+            • Game ends when the timer hits zero!
+        </div>
+        <button class="start-btn" onclick="closeInstructions()">Start Game</button>
+    </div>
+
+    <div id="overlay">
+        <h2 style="color: var(--warning)">Time Paused</h2>
+        <p>The solution was:</p>
+        <h1 id="solutionText" style="color: white; margin: 20px 0;"></h1>
+        <button class="next-btn" onclick="resumeGame()">Next Puzzle →</button>
+    </div>
+
+    <div id="resultOverlay">
+        <h2 id="resultTitle">GAME RESULT</h2>
+        <div id="finalScoreText">Score: 0</div>
+        <p id="unlockText"></p>
+        <button class="next-btn" onclick="confirmFinish()">OK</button>
+    </div>
+
+    <div class="timer-box" id="timeLeft">60</div>
+    <div class="score-box">Score: <span id="score">0</span> <span id="pointsPop">+50</span></div>
+    
+    <div class="display-area">
+        <div id="expressionText"></div>
+        <div id="liveResult">Value: 0</div>
+    </div>
+
+    <div class="grid" id="numberGrid"></div>
+
+    <div class="ops-grid">
+        <button class="op-btn" onclick="addChar('+')">+</button>
+        <button class="op-btn" onclick="addChar('-')">−</button>
+        <button class="op-btn" onclick="addChar('*')">×</button>
+        <button class="op-btn" onclick="addChar('/')">÷</button>
+        <button class="op-btn" onclick="addChar('(')">(</button>
+        <button class="op-btn" onclick="addChar(')')">)</button>
+    </div>
+
+    <div class="grid">
+        <button class="control-btn" onclick="clearInput()">Clear</button>
+        <button class="submit-btn" onclick="checkFinal()">Submit (+3s)</button>
+    </div>
+    
+    <button class="skip-btn" onclick="showSolutionAndPause()">Skip & Reveal (-3s)</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
+        authDomain: "technoprenuership-4f49d.firebaseapp.com",
+        projectId: "technoprenuership-4f49d",
+        storageBucket: "technoprenuership-4f49d.firebasestorage.app",
+        messagingSenderId: "679400264773",
+        appId: "1:679400264773:web:f27707019e8bf8e9843f2c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let currentUser = null;
+    let pendingFinish = null;
+    let isSaving = false;
+
+    onAuthStateChanged(auth, (user) => {
+        if (!user) {
+            window.location.href = "Index.html";
+            return;
+        }
+        currentUser = user;
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const levelId = params.get("id");
+    const minGoal = parseInt(params.get("min")) || 100;
+
+    let timeLeft = 60;
+    let score = 0;
+    let currentNums = [];
+    let expr = "";
+    let usedIndices = [];
+    let timerId = null;
+    let lastSolution = "";
+    let isPaused = true;
+
+    function findSolution(nums) {
+        const ops = [
+            { s: '+', f: (a, b) => a + b },
+            { s: '-', f: (a, b) => a - b },
+            { s: '-', f: (a, b) => b - a, rev: true },
+            { s: '*', f: (a, b) => a * b },
+            { s: '/', f: (a, b) => b !== 0 ? a / b : null },
+            { s: '/', f: (a, b) => a !== 0 ? b / a : null, rev: true }
+        ];
+
+        function solve(arr) {
+            if (arr.length === 1) return Math.abs(arr[0].val - 24) < 0.001 ? arr[0].str : null;
+
+            for (let i = 0; i < arr.length; i++) {
+                for (let j = i + 1; j < arr.length; j++) {
+                    const nextArr = arr.filter((_, idx) => idx !== i && idx !== j);
+                    for (const op of ops) {
+                        const res = op.f(arr[i].val, arr[j].val);
+                        if (res !== null) {
+                            const newStr = op.rev
+                                ? `(${arr[j].str}${op.s}${arr[i].str})`
+                                : `(${arr[i].str}${op.s}${arr[j].str})`;
+                            const found = solve([...nextArr, { val: res, str: newStr }]);
+                            if (found) return found;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        return solve(nums.map(n => ({ val: n, str: n.toString() })));
+    }
+
+    window.closeInstructions = function () {
+        document.getElementById('instructionOverlay').style.display = 'none';
+        startGame();
+    };
+
+    function startGame() {
+        timeLeft = 60;
+        score = 0;
+        isPaused = false;
+        pendingFinish = null;
+        isSaving = false;
+
+        document.getElementById('score').innerText = score;
+        document.getElementById('timeLeft').innerText = timeLeft;
+        document.getElementById('resultOverlay').style.display = 'none';
+
+        if (timerId) clearInterval(timerId);
+
+        timerId = setInterval(() => {
+            if (!isPaused) {
+                timeLeft--;
+                document.getElementById('timeLeft').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }
+        }, 1000);
+
+        nextRound();
+    }
+
+    function nextRound() {
+        let nums, sol;
+        do {
+            nums = Array.from({ length: 4 }, () => Math.floor(Math.random() * 9) + 1);
+            sol = findSolution(nums);
+        } while (!sol);
+
+        lastSolution = sol.replace(/\*/g, '×').replace(/\//g, '÷');
+        currentNums = nums;
+        clearInput();
+        renderNumbers();
+    }
+
+    function renderNumbers() {
+        const grid = document.getElementById('numberGrid');
+        grid.innerHTML = '';
+        currentNums.forEach((n, i) => {
+            const b = document.createElement('button');
+            b.className = 'num-btn';
+            b.innerText = n;
+            b.id = `n-${i}`;
+            b.onclick = () => {
+                expr += n;
+                usedIndices.push(i);
+                b.disabled = true;
+                updateUI();
+            };
+            grid.appendChild(b);
+        });
+    }
+
+    window.showSolutionAndPause = function () {
+        if (isPaused) return;
+        isPaused = true;
+        timeLeft = Math.max(0, timeLeft - 3);
+        document.getElementById('timeLeft').innerText = timeLeft;
+        document.getElementById('timeLeft').classList.add('timer-paused');
+        document.getElementById('solutionText').innerText = lastSolution + " = 24";
+        document.getElementById('overlay').style.display = 'flex';
+    };
+
+    window.resumeGame = function () {
+        isPaused = false;
+        document.getElementById('timeLeft').classList.remove('timer-paused');
+        document.getElementById('overlay').style.display = 'none';
+        nextRound();
+    };
+
+    window.addChar = function (c) {
+        if (!isPaused) {
+            expr += c;
+            updateUI();
+        }
+    };
+
+    window.clearInput = function () {
+        expr = "";
+        usedIndices = [];
+        document.querySelectorAll('.num-btn').forEach(b => b.disabled = false);
+        updateUI();
+    };
+
+    function updateUI() {
+        document.getElementById('expressionText').innerText = expr.replace(/\*/g, '×').replace(/\//g, '÷');
+        try {
+            const val = expr === "" ? 0 : eval(expr);
+            document.getElementById('liveResult').innerText = "Value: " + (Number.isInteger(val) ? val : val.toFixed(2));
+            document.getElementById('liveResult').style.color = Math.abs(val - 24) < 0.001 ? "#22c55e" : "#94a3b8";
+        } catch (e) {
+            document.getElementById('liveResult').innerText = "Value: ?";
+            document.getElementById('liveResult').style.color = "#94a3b8";
+        }
+    }
+
+    window.checkFinal = function () {
+        if (usedIndices.length < 4 || isPaused) return;
+        try {
+            if (Math.abs(eval(expr) - 24) < 0.001) {
+                score += 50;
+                timeLeft += 3;
+                document.getElementById('score').innerText = score;
+                document.getElementById('timeLeft').innerText = timeLeft;
+
+                const pop = document.getElementById('pointsPop');
+                pop.style.opacity = "1";
+                pop.style.transform = "translateY(-10px)";
+                setTimeout(() => {
+                    pop.style.opacity = "0";
+                    pop.style.transform = "translateY(0)";
+                }, 800);
+
+                nextRound();
+            }
+        } catch (e) {}
+    };
+
+    function endGame() {
+        isPaused = true;
+        clearInterval(timerId);
+
+        pendingFinish = { finalScore: score };
+
+        document.getElementById("finalScoreText").innerText = "Score: " + score;
+
+        if (score >= minGoal) {
+            document.getElementById("unlockText").innerText =
+                "Target reached! Next level will be unlocked.";
+        } else {
+            document.getElementById("unlockText").innerText =
+                "Need " + minGoal + " to unlock next level.";
+        }
+
+        document.getElementById("resultOverlay").style.display = "flex";
+    }
+
+    async function confirmFinish() {
+        if (!pendingFinish || isSaving) return;
+        isSaving = true;
+
+        if (!currentUser || !levelId) {
+            window.location.href = "Index.html";
+            return;
+        }
+
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            const snap = await getDoc(userRef);
+
+            if (snap.exists()) {
+                const d = snap.data();
+                const s = d.scores || {};
+                const finalScore = pendingFinish.finalScore;
+
+                if (!s[levelId] || finalScore > s[levelId]) {
+                    s[levelId] = finalScore;
+                }
+
+                const currentUnlocked = Number(s.unlockedLevel || 1);
+
+                if (finalScore >= minGoal && currentUnlocked === Number(levelId)) {
+                    s.unlockedLevel = Number(levelId) + 1;
+                }
+
+                await updateDoc(userRef, { scores: s });
+            }
+        } catch (e) {
+            console.error("Firebase Error:", e);
+        }
+
+        window.location.href = "Index.html";
+    }
+
+    window.confirmFinish = confirmFinish;
+</script>
+</body>
+</html>

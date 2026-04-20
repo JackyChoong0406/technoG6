@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>One Stroke: Clean Path</title>
+<style>
+    :root{
+        --bg:#0f172a;
+        --panel:#1e293b;
+        --panel-2:#334155;
+        --text:#ffffff;
+        --muted:#94a3b8;
+        --good:#22c55e;
+        --warn:#f59e0b;
+        --bad:#ef4444;
+        --violet:#7c3aed;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+        margin:0;
+        min-height:100vh;
+        background:var(--bg);
+        color:var(--text);
+        font-family:'Segoe UI',sans-serif;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        padding:16px;
+        user-select:none;
+        touch-action:none;
+    }
+
+    .app{
+        width:min(100%, 720px);
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:12px;
+    }
+
+    #ui-layer{
+        width:min(100%, 620px);
+        display:flex;
+        justify-content:center;
+        gap:14px;
+        flex-wrap:wrap;
+        background:var(--panel);
+        padding:12px 16px;
+        border-radius:24px;
+        border:2px solid var(--panel-2);
+    }
+
+    .stat-box{
+        min-width:110px;
+        text-align:center;
+    }
+
+    .stat-label{
+        display:block;
+        font-size:.72rem;
+        color:var(--muted);
+        text-transform:uppercase;
+        letter-spacing:.06em;
+    }
+
+    .stat-value{
+        display:block;
+        font-size:clamp(1.2rem, 3vw, 1.7rem);
+        font-weight:800;
+    }
+
+    #timer-val{ color:#fbbf24; }
+    #score-val{ color:var(--good); }
+
+    .canvas-wrap{
+        width:min(100%, 620px);
+        background:transparent;
+        display:flex;
+        justify-content:center;
+    }
+
+    canvas{
+        width:min(100%, 620px);
+        height:auto;
+        aspect-ratio: 460 / 400;
+        background:#ffffff;
+        border-radius:14px;
+        display:block;
+        box-shadow:0 8px 24px rgba(0,0,0,.35);
+        cursor:crosshair;
+    }
+
+    #msg{
+        min-height:28px;
+        text-align:center;
+        font-size:1rem;
+        font-weight:700;
+        color:var(--muted);
+    }
+
+    .controls{
+        width:min(100%, 620px);
+        display:grid;
+        grid-template-columns:repeat(3, minmax(0,1fr));
+        gap:10px;
+    }
+
+    button{
+        padding:12px 14px;
+        border:none;
+        border-radius:10px;
+        font-weight:800;
+        font-size:.95rem;
+        cursor:pointer;
+        transition:.18s transform, .18s opacity;
+    }
+
+    button:active{ transform:scale(.98); }
+
+    .btn-reset{ background:#f1f5f9; color:#0f172a; }
+    .btn-impossible{ background:var(--violet); color:white; }
+    .btn-skip{ background:var(--panel-2); color:#fca5a5; }
+
+    .overlay{
+        position:fixed;
+        inset:0;
+        background:rgba(2,6,23,.92);
+        display:none;
+        align-items:center;
+        justify-content:center;
+        padding:20px;
+        z-index:20;
+    }
+
+    .card{
+        width:min(100%, 420px);
+        background:var(--panel);
+        border:1px solid var(--panel-2);
+        border-radius:18px;
+        padding:24px;
+        text-align:center;
+        box-shadow:0 18px 40px rgba(0,0,0,.45);
+    }
+
+    .card h2{
+        margin:0 0 12px 0;
+        font-size:1.6rem;
+    }
+
+    .card p, .card li{
+        color:#cbd5e1;
+        line-height:1.55;
+    }
+
+    .card ul{
+        text-align:left;
+        padding-left:20px;
+        margin:14px 0 18px 0;
+    }
+
+    .start-btn, .ok-btn{
+        width:100%;
+        background:var(--good);
+        color:#052e16;
+        font-size:1rem;
+    }
+
+    #finalScore{
+        font-size:2rem;
+        font-weight:900;
+        color:var(--good);
+        margin:8px 0 12px;
+    }
+
+    @media (max-width: 520px){
+        .controls{
+            grid-template-columns:1fr;
+        }
+        .stat-box{
+            min-width:90px;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="instruction">
+    <div class="card">
+        <h2>One Stroke</h2>
+        <p>Trace every edge exactly once without lifting or repeating an edge.</p>
+        <ul>
+            <li><b>Reset</b> clears your current traced path.</li>
+            <li><b>Impossible</b> should only be used when the graph has no Euler path.</li>
+            <li><b>Skip</b> moves to a new graph with a time penalty.</li>
+            <li>Reach the target marks to unlock the next level.</li>
+        </ul>
+        <button class="start-btn" onclick="startGame()">Start Game</button>
+    </div>
+</div>
+
+<div class="overlay" id="result">
+    <div class="card">
+        <h2>Final Result</h2>
+        <div id="finalScore">Marks: 0</div>
+        <p id="unlockText"></p>
+        <button class="ok-btn" onclick="confirmFinish()">OK</button>
+    </div>
+</div>
+
+<div class="app">
+    <div id="ui-layer">
+        <div class="stat-box">
+            <span class="stat-label">Marks</span>
+            <span id="score-val" class="stat-value">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Time</span>
+            <span id="timer-val" class="stat-value">50</span>
+        </div>
+    </div>
+
+    <div class="canvas-wrap">
+        <canvas id="gameCanvas" width="460" height="400"></canvas>
+    </div>
+
+    <div id="msg">Follow the path!</div>
+
+    <div class="controls">
+        <button class="btn-reset" onclick="resetLevel()">Reset</button>
+        <button class="btn-impossible" onclick="claimImpossible()">Impossible</button>
+        <button class="btn-skip" onclick="skipLevel()">Skip (-3s)</button>
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
+    authDomain: "technoprenuership-4f49d.firebaseapp.com",
+    projectId: "technoprenuership-4f49d",
+    storageBucket: "technoprenuership-4f49d.appspot.com",
+    messagingSenderId: "679400264773",
+    appId: "1:679400264773:web:f27707019e8bf8e9843f2c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let currentUser = null;
+let isSaving = false;
+
+onAuthStateChanged(auth, (u) => {
+    if (!u) {
+        window.location.href = "Index.html";
+        return;
+    }
+    currentUser = u;
+});
+
+const params = new URLSearchParams(location.search);
+const levelId = params.get("id");
+const minGoal = parseInt(params.get("min")) || 100;
+
+let nodes = [];
+let edges = [];
+let tracedPath = [];
+let lastNode = null;
+let hoverNode = null;
+
+let marks = 0;
+let timeLeft = 50;
+let gameActive = false;
+let timer = null;
+
+const scoreEl = document.getElementById("score-val");
+const timerEl = document.getElementById("timer-val");
+const msgEl = document.getElementById("msg");
+
+const NODE_RADIUS = 16;
+const NODE_GAP = 78;
+const PAD_X = 55;
+const PAD_Y = 55;
+
+window.startGame = function () {
+    document.getElementById("instruction").style.display = "none";
+    gameActive = true;
+    marks = 0;
+    timeLeft = 50;
+    updateStatsUI();
+    setMessage("Follow the path!", "#94a3b8");
+    startTimer();
+    generateLevel();
+};
+
+function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+        if (!gameActive) return;
+        timeLeft--;
+        timerEl.innerText = timeLeft;
+        if (timeLeft <= 0) {
+            timeLeft = 0;
+            timerEl.innerText = "0";
+            endGame();
+        }
+    }, 1000);
+}
+
+function updateStatsUI() {
+    scoreEl.innerText = marks;
+    timerEl.innerText = timeLeft;
+}
+
+function setMessage(text, color = "#94a3b8") {
+    msgEl.innerText = text;
+    msgEl.style.color = color;
+}
+
+function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function hasDuplicateEdge(a, b) {
+    return edges.some(e => (e.a === a && e.b === b) || (e.a === b && e.b === a));
+}
+
+function addEdge(a, b) {
+    if (a === b) return false;
+    if (hasDuplicateEdge(a, b)) return false;
+    edges.push({ a, b, done: false });
+    return true;
+}
+
+function distancePointToSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    if (dx === 0 && dy === 0) return Math.hypot(px - x1, py - y1);
+
+    let t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
+    t = Math.max(0, Math.min(1, t));
+    const sx = x1 + t * dx;
+    const sy = y1 + t * dy;
+    return Math.hypot(px - sx, py - sy);
+}
+
+function lineWouldCrossNode(a, b) {
+    const n1 = nodes[a];
+    const n2 = nodes[b];
+    for (let i = 0; i < nodes.length; i++) {
+        if (i === a || i === b) continue;
+        const n = nodes[i];
+        const d = distancePointToSegment(n.x, n.y, n1.x, n1.y, n2.x, n2.y);
+        if (d < NODE_RADIUS * 1.6) return true;
+    }
+    return false;
+}
+
+function generateSpacedNodes(count) {
+    const result = [];
+    let attempts = 0;
+
+    while (result.length < count && attempts < 800) {
+        const n = {
+            x: randInt(PAD_X, canvas.width - PAD_X),
+            y: randInt(PAD_Y, canvas.height - PAD_Y)
+        };
+        const tooClose = result.some(ex => Math.hypot(ex.x - n.x, ex.y - n.y) < NODE_GAP);
+        if (!tooClose) result.push(n);
+        attempts++;
+    }
+
+    if (result.length < count) {
+        return null;
+    }
+    return result;
+}
+
+function nodeDegree(index) {
+    return edges.filter(e => e.a === index || e.b === index).length;
+}
+
+function oddCount() {
+    let odd = 0;
+    for (let i = 0; i < nodes.length; i++) {
+        if (nodeDegree(i) % 2 !== 0) odd++;
+    }
+    return odd;
+}
+
+function isEulerPossible() {
+    const odd = oddCount();
+    return odd === 0 || odd === 2;
+}
+
+function buildPathGraph(nodeCount) {
+    for (let i = 0; i < nodeCount - 1; i++) addEdge(i, i + 1);
+}
+
+function tryAddSafeExtraEdge(maxAttempts = 120) {
+    let tries = 0;
+    while (tries < maxAttempts) {
+        const a = randInt(0, nodes.length - 1);
+        const b = randInt(0, nodes.length - 1);
+        if (a !== b && !hasDuplicateEdge(a, b) && !lineWouldCrossNode(a, b)) {
+            addEdge(a, b);
+            return true;
+        }
+        tries++;
+    }
+    return false;
+}
+
+function generateLevel() {
+    tracedPath = [];
+    lastNode = null;
+    hoverNode = null;
+    edges = [];
+
+    let generated = false;
+    let tries = 0;
+
+    while (!generated && tries < 50) {
+        const nodeCount = randInt(5, 6);
+        const maybeNodes = generateSpacedNodes(nodeCount);
+        if (!maybeNodes) {
+            tries++;
+            continue;
+        }
+
+        nodes = maybeNodes;
+        edges = [];
+        buildPathGraph(nodeCount);
+
+        const makeImpossible = Math.random() < 0.32;
+        const extraCount = makeImpossible ? randInt(2, 3) : randInt(1, 2);
+
+        let added = 0;
+        let addTries = 0;
+        while (added < extraCount && addTries < 200) {
+            if (tryAddSafeExtraEdge()) added++;
+            addTries++;
+        }
+
+        if (makeImpossible) {
+            const odd = oddCount();
+            if (odd === 0 || odd === 2) {
+                if (!tryAddSafeExtraEdge()) {
+                    tries++;
+                    continue;
+                }
+            }
+        }
+
+        generated = true;
+    }
+
+    resetDrawState();
+    draw();
+}
+
+function resetDrawState() {
+    edges.forEach(e => e.done = false);
+    tracedPath = [];
+    lastNode = null;
+    hoverNode = null;
+}
+
+function resetLevel() {
+    resetDrawState();
+    setMessage("Path reset.", "#94a3b8");
+    draw();
+}
+
+function skipLevel() {
+    if (!gameActive) return;
+    timeLeft = Math.max(0, timeLeft - 3);
+    updateStatsUI();
+    setMessage("Skipped. -3s", "#f87171");
+    if (timeLeft <= 0) {
+        endGame();
+        return;
+    }
+    generateLevel();
+}
+
+function claimImpossible() {
+    if (!gameActive) return;
+
+    if (!isEulerPossible()) {
+        marks += 50;
+        timeLeft += 5;
+        updateStatsUI();
+        setMessage("Correct! Impossible graph. +50 marks, +5s", "#22c55e");
+        generateLevel();
+    } else {
+        timeLeft = Math.max(0, timeLeft - 4);
+        updateStatsUI();
+        setMessage("Wrong! This graph is solvable. -4s", "#ef4444");
+        if (timeLeft <= 0) endGame();
+    }
+}
+
+function solvedGraph() {
+    return edges.length > 0 && edges.every(e => e.done);
+}
+
+function markEdgeDone(a, b) {
+    const edge = edges.find(e =>
+        !e.done &&
+        ((e.a === a && e.b === b) || (e.a === b && e.b === a))
+    );
+    if (!edge) return false;
+    edge.done = true;
+    return true;
+}
+
+function getPointerPos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = evt.clientX ?? (evt.touches && evt.touches[0]?.clientX);
+    const clientY = evt.clientY ?? (evt.touches && evt.touches[0]?.clientY);
+    return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+    };
+}
+
+function nearestNodeIndex(x, y, radius = 24) {
+    let found = null;
+    for (let i = 0; i < nodes.length; i++) {
+        if (Math.hypot(nodes[i].x - x, nodes[i].y - y) <= radius) {
+            found = i;
+        }
+    }
+    return found;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    edges.forEach(e => {
+        ctx.beginPath();
+        ctx.moveTo(nodes[e.a].x, nodes[e.a].y);
+        ctx.lineTo(nodes[e.b].x, nodes[e.b].y);
+        ctx.strokeStyle = e.done ? "#22c55e" : "#cbd5e1";
+        ctx.lineWidth = e.done ? 9 : 5;
+        ctx.lineCap = "round";
+        ctx.stroke();
+    });
+
+    nodes.forEach((n, i) => {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, NODE_RADIUS, 0, Math.PI * 2);
+        if (i === lastNode) ctx.fillStyle = "#ef4444";
+        else if (i === hoverNode) ctx.fillStyle = "#3b82f6";
+        else ctx.fillStyle = "#1e293b";
+        ctx.fill();
+
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    });
+}
+
+function handlePick(nodeIndex) {
+    if (!gameActive || nodeIndex === null) return;
+
+    if (lastNode === null) {
+        lastNode = nodeIndex;
+        setMessage("Start tracing.", "#94a3b8");
+        draw();
+        return;
+    }
+
+    if (markEdgeDone(lastNode, nodeIndex)) {
+        lastNode = nodeIndex;
+        setMessage("Good move.", "#22c55e");
+
+        if (solvedGraph()) {
+            const reward = 10 + edges.length * 10;
+            marks += reward;
+            timeLeft += 1;
+            updateStatsUI();
+            setMessage(`Solved! +${reward} marks, +1s`, "#22c55e");
+            generateLevel();
+            return;
+        }
+    } else {
+        setMessage("Blocked! No unused edge there.", "#f59e0b");
+    }
+
+    draw();
+}
+
+canvas.addEventListener("mousemove", (e) => {
+    const pos = getPointerPos(e);
+    const found = nearestNodeIndex(pos.x, pos.y);
+    if (hoverNode !== found) {
+        hoverNode = found;
+        draw();
+    }
+});
+
+canvas.addEventListener("mousedown", (e) => {
+    if (!gameActive) return;
+    const pos = getPointerPos(e);
+    handlePick(nearestNodeIndex(pos.x, pos.y));
+});
+
+canvas.addEventListener("touchstart", (e) => {
+    if (!gameActive) return;
+    const pos = getPointerPos(e);
+    handlePick(nearestNodeIndex(pos.x, pos.y, 28));
+}, { passive: true });
+
+function endGame() {
+    if (!gameActive) return;
+    gameActive = false;
+    clearInterval(timer);
+
+    document.getElementById("finalScore").innerText = `Marks: ${marks}`;
+    document.getElementById("unlockText").innerText =
+        marks >= minGoal
+            ? "Target reached. Next level will be unlocked."
+            : `Need ${minGoal} marks to unlock next level.`;
+
+    document.getElementById("result").style.display = "flex";
+}
+
+window.confirmFinish = async function () {
+    if (isSaving) return;
+    isSaving = true;
+
+    try {
+        const ref = doc(db, "users", currentUser.uid);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+            const d = snap.data();
+            const s = d.scores || {};
+
+            if (!s[levelId] || marks > s[levelId]) {
+                s[levelId] = marks;
+            }
+
+            const unlocked = Number(s.unlockedLevel || 1);
+            if (marks >= minGoal && unlocked === Number(levelId)) {
+                s.unlockedLevel = Number(levelId) + 1;
+            }
+
+            await updateDoc(ref, { scores: s });
+        }
+    } catch (e) {
+        console.error("Firebase Error:", e);
+    }
+
+    location.href = "Index.html";
+};
+
+window.resetLevel = resetLevel;
+window.claimImpossible = claimImpossible;
+window.skipLevel = skipLevel;
+window.startGame = window.startGame;
+
+document.getElementById("instruction").style.display = "flex";
+updateStatsUI();
+draw();
+</script>
+</body>
+</html>
