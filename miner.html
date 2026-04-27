@@ -22,11 +22,15 @@
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
         canvas {
-            background-color: #4e342e;
-            border: 4px solid #3e2723;
-            border-radius: 4px;
-            cursor: crosshair;
-        }
+                background-color: #4e342e;
+                border: 4px solid #3e2723;
+                border-radius: 4px;
+                cursor: crosshair;
+                touch-action: none;
+                width: 95vw;
+                max-width: 800px;
+                height: auto;
+            }
         .ui {
             position: absolute;
             top: 10px;
@@ -49,7 +53,22 @@
             color: #aaa;
         }
 
-        #instruction-overlay {
+        #quitBtn {
+            position: absolute;
+            bottom: 35px;
+            right: 15px;
+            padding: 10px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 20;
+        }
+
+        #instruction-overlay,
+        #final-overlay {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.92);
@@ -60,7 +79,13 @@
             padding: 20px;
             box-sizing: border-box;
         }
-        .instruction-card {
+
+        #final-overlay {
+            display: none;
+        }
+
+        .instruction-card,
+        .final-card {
             background: #1f2937;
             border: 2px solid #ffd700;
             border-radius: 14px;
@@ -70,17 +95,22 @@
             text-align: center;
             box-shadow: 0 0 30px rgba(0,0,0,0.6);
         }
-        .instruction-card h2 {
+
+        .instruction-card h2,
+        .final-card h2 {
             margin-top: 0;
             color: #ffd700;
         }
+
         .instruction-card ul {
             text-align: left;
             line-height: 1.6;
             color: #ddd;
             padding-left: 22px;
         }
-        .start-btn {
+
+        .start-btn,
+        .save-btn {
             background: #22c55e;
             border: none;
             padding: 12px 24px;
@@ -91,6 +121,19 @@
             cursor: pointer;
             margin-top: 12px;
             width: 100%;
+        }
+
+        .final-score {
+            font-size: 36px;
+            color: #ffd700;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .final-message {
+            color: #ddd;
+            font-size: 16px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -111,12 +154,26 @@
         </div>
     </div>
 
+    <div id="final-overlay">
+        <div class="final-card">
+            <h2>MISSION OVER</h2>
+            <p class="final-message">Your final score is:</p>
+            <div class="final-score" id="final-score-text">0</div>
+            <p id="result-message" class="final-message"></p>
+            <button class="save-btn" id="saveProgressBtn">SAVE PROGRESS</button>
+        </div>
+    </div>
+
     <div id="gameContainer">
         <div class="ui">
             <div>Score: <span id="score">0</span></div>
             <div>Time: <span id="timer">60</span>s</div>
         </div>
+
         <canvas id="gameCanvas" width="800" height="550"></canvas>
+
+        <button id="quitBtn">Quit & Save</button>
+
         <div id="instructions">Press <b>SPACE</b> or <b>CLICK</b> to launch</div>
     </div>
 
@@ -164,16 +221,24 @@
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const minerImg = new Image();
+        minerImg.src = "miner.png";
         const scoreElement = document.getElementById('score');
         const timerElement = document.getElementById('timer');
+        const quitBtn = document.getElementById("quitBtn");
+        const finalOverlay = document.getElementById("final-overlay");
+        const finalScoreText = document.getElementById("final-score-text");
+        const resultMessage = document.getElementById("result-message");
+        const saveProgressBtn = document.getElementById("saveProgressBtn");
 
         let score = 0;
         let timeLeft = 60;
         let gameOver = false;
+        let finalScreenShown = false;
 
         const hook = {
             x: canvas.width / 2,
-            y: 70,
+            y: 90,
             angle: 0,
             angleSpeed: 0.02,
             length: 40,
@@ -188,10 +253,10 @@
 
         let items = [];
         const itemTypes = {
-            SMALL_GOLD: { radius: 12, value: 50,  weight: 9, type: 'gold' },
-            MED_GOLD:   { radius: 25, value: 150, weight: 5, type: 'gold' },
-            LARG_GOLD:  { radius: 40, value: 500, weight: 2, type: 'gold' },
-            ROCK:       { radius: 22, value: 20,  weight: 3, type: 'rock' }
+            SMALL_GOLD: { radius: 12, value: 10,  weight: 9, type: 'gold' },
+            MED_GOLD:   { radius: 25, value: 20, weight: 5, type: 'gold' },
+            LARG_GOLD:  { radius: 40, value: 50, weight: 2, type: 'gold' },
+            ROCK:       { radius: 22, value: 2,  weight: 3, type: 'rock' }
         };
 
         function generateIrregularShape(radius, points = 8) {
@@ -224,16 +289,49 @@
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') launchHook();
         });
+
         canvas.addEventListener('mousedown', launchHook);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            launchHook();
+        }, { passive: false });
+
+        quitBtn.addEventListener("click", () => {
+            if (!gameStarted || gameOver) return;
+
+            gameOver = true;
+            showFinalScoreScreen();
+        });
+
+        saveProgressBtn.addEventListener("click", () => {
+            saveProgressBtn.disabled = true;
+            saveProgressBtn.innerText = "SAVING...";
+            finish();
+        });
 
         function launchHook() {
             if (!gameStarted) return;
 
             if (hook.state === 'swinging' && !gameOver) {
                 hook.state = 'extending';
-            } else if (gameOver) {
-                resetGame();
             }
+        }
+
+        function showFinalScoreScreen() {
+            if (finalScreenShown) return;
+            finalScreenShown = true;
+
+            finalScoreText.innerText = score;
+
+            if (score >= minGoal) {
+                resultMessage.innerHTML = "Target reached! Next level will be unlocked after saving.";
+                resultMessage.style.color = "#22c55e";
+            } else {
+                resultMessage.innerHTML = "Target not reached. Your best score will still be saved.";
+                resultMessage.style.color = "#f87171";
+            }
+
+            finalOverlay.style.display = "flex";
         }
 
         async function finish() {
@@ -309,6 +407,9 @@
                         score += hook.target.value;
                         scoreElement.innerText = score;
                         hook.target = null;
+                    if (items.length === 0) {
+                     initItems();
+                    }
                     }
                 }
             }
@@ -394,22 +495,23 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             ctx.fillStyle = '#4e342e';
-            ctx.fillRect(0, 70, canvas.width, canvas.height);
+            ctx.fillRect(0, 90, canvas.width, canvas.height);
             drawBackgroundTexture();
 
             ctx.fillStyle = '#a7ffeb';
-            ctx.fillRect(0, 0, canvas.width, 70);
+            ctx.fillRect(0, 0, canvas.width, 90);
 
-            ctx.fillStyle = '#333';
-            ctx.fillRect(hook.x - 20, 50, 40, 20);
-            ctx.fillStyle = '#ff5722';
-            ctx.fillRect(hook.x - 15, 30, 30, 25);
-            ctx.fillStyle = '#ffccbc';
-            ctx.beginPath();
-            ctx.arc(hook.x, 25, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#795548';
-            ctx.fillRect(hook.x - 12, 12, 24, 8);
+            const minerWidth = 100;
+            const minerHeight = 120;
+
+            // draw miner image centered above hook
+            ctx.drawImage(
+                minerImg,
+                hook.x - minerWidth / 2,
+                -5,
+                minerWidth,
+                minerHeight
+            );
 
             const hx = hook.x + Math.sin(hook.angle) * hook.length;
             const hy = hook.y + Math.cos(hook.angle) * hook.length;
@@ -442,29 +544,16 @@
                 if (caughtItem.type === 'gold') drawGold(ctx, caughtItem);
                 else drawRock(ctx, caughtItem);
             }
-
-            if (gameOver) {
-                ctx.fillStyle = 'rgba(0,0,0,0.85)';
-                ctx.fillRect(0,0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ffd700';
-                ctx.font = 'bold 50px Courier New';
-                ctx.textAlign = 'center';
-                ctx.fillText("SHIFT OVER!", canvas.width/2, canvas.height/2 - 20);
-                ctx.fillStyle = 'white';
-                ctx.font = '30px Courier New';
-                ctx.fillText("Total Value: $" + score, canvas.width/2, canvas.height/2 + 40);
-                ctx.font = '18px Courier New';
-                ctx.fillText("Saving result...", canvas.width/2, canvas.height/2 + 90);
-            }
         }
 
         const timerInterval = setInterval(() => {
             if (!gameOver && gameStarted) {
                 timeLeft--;
                 timerElement.innerText = timeLeft;
+
                 if (timeLeft <= 0) {
                     gameOver = true;
-                    finish();
+                    showFinalScoreScreen();
                 }
             }
         }, 1000);
@@ -476,6 +565,10 @@
             timerElement.innerText = timeLeft;
             gameOver = false;
             hasFinished = false;
+            finalScreenShown = false;
+            finalOverlay.style.display = "none";
+            saveProgressBtn.disabled = false;
+            saveProgressBtn.innerText = "SAVE PROGRESS";
             hook.length = hook.baseLength;
             hook.state = 'swinging';
             hook.target = null;
