@@ -23,12 +23,48 @@
 
 <canvas id="gameCanvas" width="1400" height="800"></canvas>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
+
+// ==========================
+// FIREBASE
+// ==========================
+const firebaseConfig = {
+  apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
+  authDomain: "technoprenuership-4f49d.firebaseapp.com",
+  projectId: "technoprenuership-4f49d",
+  storageBucket: "technoprenuership-4f49d.firebasestorage.app",
+  messagingSenderId: "679400264773",
+  appId: "1:679400264773:web:f27707019e8bf8e9843f2c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let currentUser = null;
+let isSaving = false;
+
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    alert("Not logged in!");
+    window.location.href = "Index.html";
+    return;
+  }
+  currentUser = user;
+});
+
+const params = new URLSearchParams(window.location.search);
+const levelId = Number(params.get("id"));
+const minGoal = parseInt(params.get("min")) || 50;
 
 // ==========================
 // IMAGE LOADING
@@ -69,6 +105,7 @@ let angle = 0;
 let angleSpeed = 0.03;
 
 let gameOver = false;
+let passed = false;
 let startTicks = Date.now();
 let totalGameTime = 45;
 let remaining = totalGameTime;
@@ -113,6 +150,16 @@ const ruleButton = {
   y: 640,
   w: 320,
   h: 60
+};
+
+// ==========================
+// RESULT BUTTON
+// ==========================
+const resultButton = {
+  x: WIDTH / 2 - 190,
+  y: 510,
+  w: 380,
+  h: 65
 };
 
 // ==========================
@@ -253,6 +300,7 @@ function refillObjects() {
 function resetGame() {
   score = 0;
   lives = 3;
+  passed = false;
   objects = createObjects();
 
   caughtObj = null;
@@ -284,6 +332,47 @@ function resetGame() {
   safeMax = 70;
 
   explosions = [];
+}
+
+// ==========================
+// FIREBASE SAVE
+// ==========================
+async function finish() {
+  if (isSaving) return;
+  isSaving = true;
+
+  if (!currentUser || !levelId) {
+    window.location.href = "Index.html";
+    return;
+  }
+
+  try {
+    const userRef = doc(db, "users", currentUser.uid);
+    const snap = await getDoc(userRef);
+
+    if (snap.exists()) {
+      let d = snap.data();
+      let s = d.scores || {};
+
+      if (!s[levelId] || score > s[levelId]) {
+        s[levelId] = score;
+      }
+
+      let currentUnlocked = Number(s.unlockedLevel || 1);
+
+      if (score >= minGoal && currentUnlocked === levelId) {
+        s.unlockedLevel = levelId + 1;
+      } else {
+        s.unlockedLevel = currentUnlocked;
+      }
+
+      await updateDoc(userRef, { scores: s });
+    }
+  } catch (e) {
+    console.error("Firebase Error:", e);
+  }
+
+  window.location.href = "Index.html";
 }
 
 // ==========================
@@ -622,6 +711,30 @@ function drawRuleButton(text) {
 }
 
 // ==========================
+// RESULT BUTTON DRAW
+// ==========================
+function drawResultButton() {
+  ctx.fillStyle = "#22c55e";
+  roundRect(resultButton.x, resultButton.y, resultButton.w, resultButton.h, 18);
+
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(resultButton.x, resultButton.y, resultButton.w, resultButton.h);
+
+  ctx.fillStyle = "white";
+  ctx.font = "28px Arial";
+
+  const text = isSaving ? "Saving..." : "Return to Main Page";
+  const textWidth = ctx.measureText(text).width;
+
+  ctx.fillText(
+    text,
+    resultButton.x + resultButton.w / 2 - textWidth / 2,
+    resultButton.y + 42
+  );
+}
+
+// ==========================
 // RULES
 // ==========================
 function drawRules() {
@@ -753,7 +866,13 @@ function gameLoop() {
 
   remaining = Math.max(0, Math.floor(totalGameTime - elapsed));
 
+  if (score >= minGoal && !gameOver) {
+    passed = true;
+    gameOver = true;
+  }
+
   if ((remaining <= 0 || lives <= 0) && !gameOver) {
+    passed = false;
     gameOver = true;
   }
 
@@ -810,6 +929,7 @@ function gameLoop() {
     obj.draw();
 
     if (
+      !gameOver &&
       rectsCollide(hookRect, obj.rect()) &&
       hookDropped &&
       !caughtObj &&
@@ -836,11 +956,12 @@ function gameLoop() {
   ctx.font = "26px Arial";
 
   ctx.fillText(`Score: ${score}`, 10, 30);
-  ctx.fillText(`Time: ${remaining}`, 10, 60);
-  ctx.fillText(`Lives: ${lives}`, 10, 90);
+  ctx.fillText(`Target: ${minGoal}`, 10, 60);
+  ctx.fillText(`Time: ${remaining}`, 10, 90);
+  ctx.fillText(`Lives: ${lives}`, 10, 120);
 
   if (frozen) {
-    drawCenteredText("FROZEN!", 120, 45, "#a8f0ff");
+    drawCenteredText("FROZEN!", 150, 45, "#a8f0ff");
   }
 
   if (reeling) {
@@ -870,12 +991,25 @@ function gameLoop() {
   }
 
   if (gameOver) {
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    drawCenteredText("GAME OVER", 280, 60);
-    drawCenteredText(`Final Score: ${score}`, 360, 36);
-    drawCenteredText("Press R to Restart", 440, 30);
+    if (passed) {
+      drawCenteredText("LEVEL PASSED!", 250, 60, "#22c55e");
+    } else {
+      drawCenteredText("GAME OVER", 250, 60, "#ff5555");
+    }
+
+    drawCenteredText(`Final Score: ${score}`, 330, 36);
+    drawCenteredText(`Target Score: ${minGoal}`, 380, 30);
+
+    if (passed) {
+      drawCenteredText("Next level will be unlocked.", 430, 28, "#ffffff");
+    } else {
+      drawCenteredText("Score not enough to unlock next level.", 430, 28, "#ffffff");
+    }
+
+    drawResultButton();
   }
 
   requestAnimationFrame(gameLoop);
@@ -895,10 +1029,6 @@ document.addEventListener("keydown", function(event) {
       if (event.code === "Space" && !hookDropped && !reeling) {
         hookDropped = true;
       }
-    } else {
-      if (event.key.toLowerCase() === "r") {
-        resetGame();
-      }
     }
   }
 });
@@ -910,26 +1040,37 @@ document.addEventListener("keyup", function(event) {
 });
 
 // ==========================
-// MOUSE CONTROL FOR RULE PAGE
+// MOUSE CONTROL
 // ==========================
 canvas.addEventListener("click", function(event) {
-  if (gameState !== "rules") return;
-
   const rect = canvas.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
 
-  if (
-    mouseX >= ruleButton.x &&
-    mouseX <= ruleButton.x + ruleButton.w &&
-    mouseY >= ruleButton.y &&
-    mouseY <= ruleButton.y + ruleButton.h
-  ) {
-    if (rulePage === 0) {
-      rulePage = 1;
-    } else {
-      gameState = "game";
-      resetGame();
+  if (gameState === "rules") {
+    if (
+      mouseX >= ruleButton.x &&
+      mouseX <= ruleButton.x + ruleButton.w &&
+      mouseY >= ruleButton.y &&
+      mouseY <= ruleButton.y + ruleButton.h
+    ) {
+      if (rulePage === 0) {
+        rulePage = 1;
+      } else {
+        gameState = "game";
+        resetGame();
+      }
+    }
+  }
+
+  if (gameState === "game" && gameOver) {
+    if (
+      mouseX >= resultButton.x &&
+      mouseX <= resultButton.x + resultButton.w &&
+      mouseY >= resultButton.y &&
+      mouseY <= resultButton.y + resultButton.h
+    ) {
+      finish();
     }
   }
 });
