@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tetris Pro - Fixed Game Over Detection</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #0a2a3a, #001a2a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Courier New', monospace;
+            overflow: hidden;
+            touch-action: manipulation;
+            transition: background 0.5s ease;
+        }
+
+        body.theme-cyan { background: radial-gradient(circle at 20% 30%, #0a2a3a, #001a2a); }
+        body.theme-purple { background: radial-gradient(circle at 20% 30%, #2a0a3a, #1a002a); }
+        body.theme-green { background: radial-gradient(circle at 20% 30%, #0a2a1a, #001a0a); }
+        body.theme-red { background: radial-gradient(circle at 20% 30%, #3a0a0a, #2a0000); }
+        body.theme-orange { background: radial-gradient(circle at 20% 30%, #3a2a0a, #2a1a00); }
+
+        .game-container {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 48px;
+            padding: 20px;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 0 0 3px cyan, 0 12px 28px black;
+            border-radius: 16px;
+            cursor: pointer;
+        }
+
+        .info-panel {
+            position: fixed;
+            bottom: 15px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #bbb;
+            font-size: 13px;
+            font-family: monospace;
+            background: #0a0e17aa;
+            backdrop-filter: blur(8px);
+            width: fit-content;
+            margin: 0 auto;
+            padding: 6px 18px;
+            border-radius: 60px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .admin-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid cyan;
+            font-family: monospace;
+            z-index: 200;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        
+        .admin-panel:hover {
+            background: rgba(0,255,255,0.2);
+            transform: scale(1.05);
+        }
+        
+        .settings-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 8px 12px;
+            border-radius: 12px;
+            border: 1px solid cyan;
+            font-family: monospace;
+            z-index: 200;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        
+        .settings-panel:hover {
+            background: rgba(0,255,255,0.2);
+            transform: scale(1.05);
+        }
+        
+        .settings-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0a0f1e;
+            border: 2px solid cyan;
+            border-radius: 20px;
+            padding: 25px;
+            z-index: 1000;
+            min-width: 450px;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 0 50px rgba(0,255,255,0.3);
+            font-family: monospace;
+        }
+        
+        .settings-modal h3 {
+            color: cyan;
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        .settings-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #1a1f2e;
+            border-radius: 15px;
+        }
+        
+        .settings-section h4 {
+            color: #ffaa44;
+            margin: 0 0 15px 0;
+        }
+        
+        .theme-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .theme-btn {
+            padding: 8px 15px;
+            border: 2px solid;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .theme-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .theme-cyan { background: #0ff; color: #000; border-color: #0ff; }
+        .theme-purple { background: #a020f0; color: #fff; border-color: #a020f0; }
+        .theme-green { background: #0f0; color: #000; border-color: #0f0; }
+        .theme-red { background: #f00; color: #fff; border-color: #f00; }
+        .theme-orange { background: #ffa500; color: #000; border-color: #ffa500; }
+        
+        .music-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .music-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #0a0f1e;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .music-item:hover {
+            background: #2a2f4e;
+            transform: translateX(5px);
+        }
+        
+        .music-item.active {
+            background: cyan;
+            color: black;
+        }
+        
+        .music-item .name {
+            flex: 1;
+        }
+        
+        .music-item .play-btn {
+            background: cyan;
+            color: black;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        
+        .volume-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .close-settings {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            color: cyan;
+        }
+        
+        .close-settings:hover {
+            color: #ff0;
+        }
+        
+        .admin-modal, .login-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #0a0f1e;
+            border: 2px solid cyan;
+            border-radius: 20px;
+            padding: 20px;
+            z-index: 1000;
+            min-width: 500px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 50px rgba(0,255,255,0.3);
+            font-family: monospace;
+        }
+        
+        .login-box {
+            text-align: center;
+        }
+        
+        .login-box input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #1a1f2e;
+            border: 1px solid cyan;
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .menu-leaderboard {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid cyan;
+            border-radius: 15px;
+            padding: 15px;
+            width: 280px;
+            font-family: monospace;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .menu-leaderboard h4 {
+            color: cyan;
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+        
+        .menu-leaderboard .leaderboard-list {
+            font-size: 12px;
+        }
+        
+        .menu-leaderboard .lb-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            color: #fff;
+            border-bottom: 1px solid #333;
+        }
+        
+        .sound-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid cyan;
+            border-radius: 30px;
+            padding: 8px 15px;
+            color: cyan;
+            font-family: monospace;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        
+        .sound-toggle:hover {
+            background: cyan;
+            color: black;
+        }
+        
+        .pause-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            border: 1px solid cyan;
+            border-radius: 30px;
+            padding: 8px 25px;
+            color: cyan;
+            font-family: monospace;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 100;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .pause-btn.visible {
+            display: block;
+        }
+        
+        .b2b-badge {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #ffaa44;
+            border-radius: 10px;
+            padding: 5px 10px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #ffaa44;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .b2b-badge.active {
+            border-color: #ff0;
+            color: #ff0;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="theme-cyan">
+<div>
+    <div class="game-container">
+        <canvas id="tetrisCanvas" width="1200" height="800"></canvas>
+    </div>
+    <div class="info-panel">
+        🎮 ← → ↓ | SPACE hard drop | ↑ / Z / X rotate | C hold | P = Pause | ESC menu
+    </div>
+    <div class="admin-panel" id="adminBtn">
+        🔧 ADMIN
+    </div>
+    <div class="settings-panel" id="settingsBtn">
+        ⚙️ SETTINGS
+    </div>
+    <div class="online-badge" id="onlineBadge">
+        🌍 Global leaderboard
+    </div>
+    <div class="menu-leaderboard" id="menuLeaderboard">
+        <h4>🏆 TOP 10 PLAYERS 🏆</h4>
+        <div class="leaderboard-list" id="menuLeaderboardList">
+            Loading...
+        </div>
+    </div>
+    <div class="sound-toggle" id="soundToggle">
+        🔊 SOUND ON
+    </div>
+    <div class="pause-btn" id="pauseBtn">
+        ⏸️ PAUSE
+    </div>
+    <div class="b2b-badge" id="b2bBadge">
+        🔥 B2B
+    </div>
+</div>  
+
+<script>
+    (function(){
+        // ========== MUSIC SYSTEM ==========
+        let audioCtx = null;
+        let soundEnabled = true;
+        let musicVolume = 0.3;
+        let musicInterval = null;
+        
+        const musicTracks = {
+            'tetris_a': { name: '🎵 Tetris Theme A', notes: [659.25, 659.25, 0, 659.25, 0, 523.25, 659.25, 0, 783.99], tempo: 280 },
+            'tetris_b': { name: '🎵 Tetris Theme B', notes: [523.25, 0, 523.25, 0, 523.25, 659.25, 523.25, 0, 783.99], tempo: 300 },
+            'tetris_c': { name: '🎵 Tetris Theme C', notes: [783.99, 0, 783.99, 0, 659.25, 523.25, 659.25, 0, 783.99], tempo: 260 },
+            'chiptune': { name: '🎵 8-Bit Adventure', notes: [523.25, 587.33, 659.25, 523.25, 659.25, 783.99, 880.00, 0, 523.25], tempo: 320 },
+            'techno': { name: '🎵 Techno Beat', notes: [440.00, 0, 440.00, 0, 440.00, 523.25, 587.33, 0, 440.00], tempo: 240 }
+        };
+        
+        let currentTrackId = 'tetris_a';
+        let musicNoteIndex = 0;
+        let musicEnabled = true;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+        
+        function playMusicNote(frequency, duration, volume) {
+            if (!soundEnabled || !musicEnabled || !audioCtx) return;
+            if (frequency === 0) return;
+            try {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.frequency.value = frequency;
+                gainNode.gain.value = volume * musicVolume;
+                oscillator.type = 'square';
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                oscillator.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+        
+        function startMusic() {
+            if (musicInterval) clearInterval(musicInterval);
+            if (!soundEnabled || !musicEnabled) return;
+            if (!gameActive || isPaused || uiState !== "game") return;
+            const track = musicTracks[currentTrackId];
+            if (!track) return;
+            musicNoteIndex = 0;
+            musicInterval = setInterval(() => {
+                if (gameActive && !isPaused && uiState === "game" && soundEnabled && musicEnabled) {
+                    const note = track.notes[musicNoteIndex % track.notes.length];
+                    playMusicNote(note, 0.25, 0.15);
+                    musicNoteIndex++;
+                }
+            }, track.tempo);
+        }
+        
+        function stopMusic() { if (musicInterval) { clearInterval(musicInterval); musicInterval = null; } musicNoteIndex = 0; }
+        function changeMusic(trackId) { currentTrackId = trackId; stopMusic(); if (gameActive && !isPaused && uiState === "game" && soundEnabled && musicEnabled) startMusic(); localStorage.setItem("tetris_music_track", trackId); }
+        
+        // ========== SOUND EFFECTS ==========
+        function playBeep(frequency, duration, volume = 0.3, type = 'sine') {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.frequency.value = frequency;
+                gainNode.gain.value = volume;
+                oscillator.type = type;
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                oscillator.stop(audioCtx.currentTime + duration);
+            } catch(e) { console.log("Audio error:", e); }
+        }
+        function playMove() { playBeep(523.25, 0.05, 0.12); }
+        function playRotate() { playBeep(587.33, 0.07, 0.15); }
+        function playHardDrop() { playBeep(783.99, 0.1, 0.2); }
+        function playLineClear(lines) {
+            if (lines === 1) playBeep(523.25, 0.15, 0.25);
+            else if (lines === 2) playBeep(659.25, 0.2, 0.3);
+            else if (lines === 3) playBeep(783.99, 0.25, 0.35);
+            else if (lines === 4) playBeep(1046.50, 0.3, 0.4);
+        }
+        function playSpin() { playBeep(880.00, 0.12, 0.35); setTimeout(() => playBeep(987.77, 0.12, 0.35), 100); }
+        function playAllClear() { playBeep(1318.52, 0.2, 0.4); setTimeout(() => playBeep(1567.98, 0.2, 0.4), 150); setTimeout(() => playBeep(2093.00, 0.3, 0.4), 300); }
+        function playGameOver() { playBeep(440.00, 0.3, 0.4); setTimeout(() => playBeep(349.23, 0.5, 0.4), 300); }
+        function playCombo(comboCount) { if (comboCount > 0) { let freq = 523.25 + (comboCount * 50); playBeep(Math.min(freq, 1200), 0.1, 0.2); } }
+        
+        // ========== FIREBASE CONFIGURATION ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyBy4bE5n3LXoSsH1SNxmRQliiSW7TeHjuQ",
+            authDomain: "tetrisc-pro.firebaseapp.com",
+            projectId: "tetrisc-pro",
+            storageBucket: "tetrisc-pro.firebasestorage.app",
+            messagingSenderId: "650646561890",
+            appId: "1:650646561890:web:f94a364e5125f54da29d3b",
+            measurementId: "G-JW955N0PXM"
+        };
+        
+        let firebaseInitialized = false;
+        let database = null;
+        let auth = null;
+        let isAdmin = false;
+        let currentUser = null;
+        
+        // ========== INFINITE SPEED CONFIGURATION ==========
+        const SPEED_CONFIG = {
+            BASE_SPEED_MS: 500,
+            POINTS_PER_LEVEL: 1000,  // Level up every 500 points
+            SPEED_FACTOR: 0.82,      // 18% faster each level
+            MIN_SPEED_MS: 0.1
+        };
+        
+        // ========== TETRIS CORE ==========
+        const SHAPES_DATA = {
+            "I": { matrices: [[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],[[0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],[[0,0,0,0],[0,0,0,0],[1,1,1,1],[0,0,0,0]],[[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]]], color: "#0ff", canSpin: true },
+            "O": { matrices: [[[1,1],[1,1]]], color: "#ff0", canSpin: false },
+            "T": { matrices: [[[0,1,0],[1,1,1],[0,0,0]],[[0,1,0],[0,1,1],[0,1,0]],[[0,0,0],[1,1,1],[0,1,0]],[[0,1,0],[1,1,0],[0,1,0]]], color: "#a020f0", canSpin: true },
+            "L": { matrices: [[[0,0,1],[1,1,1],[0,0,0]],[[0,1,0],[0,1,0],[0,1,1]],[[0,0,0],[1,1,1],[1,0,0]],[[1,1,0],[0,1,0],[0,1,0]]], color: "#ffa500", canSpin: true },
+            "J": { matrices: [[[1,0,0],[1,1,1],[0,0,0]],[[0,1,1],[0,1,0],[0,1,0]],[[0,0,0],[1,1,1],[0,0,1]],[[0,1,0],[0,1,0],[1,1,0]]], color: "#00f", canSpin: true },
+            "S": { matrices: [[[0,1,1],[1,1,0],[0,0,0]],[[0,1,0],[0,1,1],[0,0,1]],[[0,0,0],[0,1,1],[1,1,0]],[[1,0,0],[1,1,0],[0,1,0]]], color: "#0f0", canSpin: true },
+            "Z": { matrices: [[[1,1,0],[0,1,1],[0,0,0]],[[0,0,1],[0,1,1],[0,1,0]],[[0,0,0],[1,1,0],[0,1,1]],[[0,1,0],[1,1,0],[1,0,0]]], color: "#f00", canSpin: true }
+        };
+        const SHAPE_KEYS = ["I","O","T","L","J","S","Z"];
+        
+        let COLS = 10, ROWS = 20, BLOCK_SIZE = 30;
+        let canvas = document.getElementById("tetrisCanvas");
+        let ctx = canvas.getContext("2d");
+        
+        let grid = [], bag = [], activePiece = null, nextQueue = [], holdPiece = null;
+        let canHold = true, score = 0, linesClearedTotal = 0, elapsedTimeSec = 0;
+        let lastTimestamp = 0, gameLoopId = null, gameActive = false, isPaused = false;
+        let currentMode = "infinite";
+        let playerName = "PRO", combo = 0, level = 0;
+        let backToBack = false;
+        
+        // Movement
+        let leftPressed = false, rightPressed = false, softDropPressed = false;
+        let leftRepeatTimer = 0, rightRepeatTimer = 0;
+        let lastLeftMove = 0, lastRightMove = 0;
+        let dasDelay = 150, arrDelay = 40;
+        let lastFallTime = 0, softDropSpeed = 16;
+        let lockDelay = 500, lockTimer = 0, isOnGroundFlag = false, lockMoves = 0;
+        const MAX_LOCK_MOVES = 10;
+        const SPRINT_GOAL = 40;
+        let sprintCompleted = false;
+        
+        let leaderboardInfinite = [], leaderboardSprint = [];
+        let uiState = "menu", menuSelection = 0;
+        let menuOptions = ["INFINITE MODE", "40 LINES SPRINT", "ENTER NAME", "RULES", "SETTINGS", "QUIT"];
+        let inputName = "";
+        let popupMessages = [];
+        let adminModalOpen = false, adminTab = "infinite";
+        let lastRotationHadKick = false;
+        
+        function getFallSpeed() {
+            let currentLevel = Math.floor(score / SPEED_CONFIG.POINTS_PER_LEVEL);
+            level = currentLevel;
+            let speed = SPEED_CONFIG.BASE_SPEED_MS * Math.pow(SPEED_CONFIG.SPEED_FACTOR, currentLevel);
+            return Math.max(SPEED_CONFIG.MIN_SPEED_MS, speed);
+        }
+        
+        function getGravity() {
+            let speed = getFallSpeed();
+            return Math.floor(SPEED_CONFIG.BASE_SPEED_MS / Math.max(0.5, speed));
+        }
+        
+        // ========== FIREBASE FUNCTIONS ==========
+        function initFirebase() {
+            if (typeof firebase !== 'undefined') {
+                try {
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    database = firebase.database();
+                    auth = firebase.auth();
+                    firebaseInitialized = true;
+                    document.getElementById("onlineBadge").innerHTML = "🌍 Global leaderboard";
+                    auth.onAuthStateChanged((user) => {
+                        if (user) { currentUser = user; isAdmin = true; document.getElementById("onlineBadge").innerHTML = "✅ Admin mode"; showPopup("✅ Admin authenticated!", "#0f0"); }
+                        else { currentUser = null; isAdmin = false; document.getElementById("onlineBadge").innerHTML = "🌍 Global leaderboard"; }
+                    });
+                    loadOnlineLeaderboards();
+                    return true;
+                } catch(e) { return false; }
+            }
+            return false;
+        }
+        
+        function adminLogin() {
+            if (!firebaseInitialized) { alert("Firebase not initialized!"); return; }
+            const overlay = document.createElement('div');
+            overlay.className = 'login-overlay';
+            overlay.innerHTML = `<h3 style="color:cyan; text-align:center;">🔐 Admin Login</h3>
+                <input type="email" id="adminEmail" placeholder="Email" autocomplete="off">
+                <input type="password" id="adminPassword" placeholder="Password">
+                <button onclick="submitAdminLogin()" style="background:cyan; color:black; padding:8px 20px; margin:10px; border:none; border-radius:8px; cursor:pointer;">Login</button>
+                <button onclick="closeLoginOverlay()" style="background:#444; color:white; padding:8px 20px; margin:10px; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
+                <div id="loginError" style="color:#ff6666; margin-top:10px;"></div>`;
+            document.body.appendChild(overlay);
+            window.submitAdminLogin = function() {
+                const email = document.getElementById('adminEmail').value;
+                const password = document.getElementById('adminPassword').value;
+                const errorDiv = document.getElementById('loginError');
+                if (!email || !password) { errorDiv.textContent = 'Please enter both email and password'; return; }
+                auth.signInWithEmailAndPassword(email, password).then(() => { closeLoginOverlay(); showPopup("✅ Admin login successful!", "#0f0"); openAdminModal(); }).catch((error) => { errorDiv.textContent = 'Login failed: ' + error.message; });
+            };
+            window.closeLoginOverlay = function() { overlay.remove(); };
+        }
+        
+        function updateMenuLeaderboard() {
+            const container = document.getElementById("menuLeaderboardList");
+            if (!container) return;
+            const leaderboard = currentMode === "sprint" ? leaderboardSprint : leaderboardInfinite;
+            const isSprint = currentMode === "sprint";
+            if (leaderboard.length === 0) { container.innerHTML = '<div style="color:#888; text-align:center;">No scores yet</div>'; return; }
+            container.innerHTML = leaderboard.slice(0,10).map((entry, i) => `<div class="lb-row"><span class="lb-rank">${i+1}</span><span class="lb-name">${escapeHtml(entry.name)}</span><span class="lb-score">${entry.score}${isSprint ? 's' : ''}</span></div>`).join('');
+        }
+        
+        function loadOnlineLeaderboards() {
+            if (!firebaseInitialized) return;
+            database.ref('leaderboard/infinite').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) { leaderboardInfinite = Object.values(data); leaderboardInfinite.sort((a,b) => b.score - a.score); leaderboardInfinite = leaderboardInfinite.slice(0,10); localStorage.setItem("tetris_infinite_lead", JSON.stringify(leaderboardInfinite)); if (uiState === "menu") updateMenuLeaderboard(); }
+            });
+            database.ref('leaderboard/sprint').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) { leaderboardSprint = Object.values(data); leaderboardSprint.sort((a,b) => a.score - b.score); leaderboardSprint = leaderboardSprint.slice(0,10); localStorage.setItem("tetris_sprint_lead", JSON.stringify(leaderboardSprint)); if (uiState === "menu") updateMenuLeaderboard(); }
+            });
+        }
+        
+        function saveScoreToFirebase(name, scoreValue, mode) {
+            if (!firebaseInitialized) { saveToLocalLeaderboard(name, scoreValue, mode); return; }
+            const timestamp = Date.now();
+            const scoreData = { name: name, score: scoreValue, timestamp: timestamp, mode: mode };
+            const path = mode === "sprint" ? 'leaderboard/sprint' : 'leaderboard/infinite';
+            database.ref(path).push().set(scoreData).then(() => { showPopup("🏆 Score saved to global leaderboard!", "#0f0"); loadOnlineLeaderboards(); }).catch(() => { saveToLocalLeaderboard(name, scoreValue, mode); showPopup("⚠️ Could not save to cloud, saved locally", "#ffaa44"); });
+        }
+        
+        function saveToLocalLeaderboard(name, scoreValue, mode) {
+            const leader = mode === "sprint" ? leaderboardSprint : leaderboardInfinite;
+            leader.push({name: name, score: scoreValue});
+            if(mode === "sprint"){ leader.sort((a,b)=> a.score - b.score); leaderboardSprint = leader.slice(0,10); localStorage.setItem("tetris_sprint_lead", JSON.stringify(leaderboardSprint)); }
+            else { leader.sort((a,b)=> b.score - a.score); leaderboardInfinite = leader.slice(0,10); localStorage.setItem("tetris_infinite_lead", JSON.stringify(leaderboardInfinite)); }
+            showPopup("💾 Score saved locally!", "#ffaa44"); if (uiState === "menu") updateMenuLeaderboard();
+        }
+        
+        // ========== SPIN DETECTION ==========
+        function isImmobile(piece) { return !validMove(piece, 0, 1) && !validMove(piece, -1, 0) && !validMove(piece, 1, 0); }
+        function checkTSpinCorners(piece) {
+            const corners = [[piece.x, piece.y], [piece.x + piece.matrix[0].length - 1, piece.y], [piece.x, piece.y + piece.matrix.length - 1], [piece.x + piece.matrix[0].length - 1, piece.y + piece.matrix.length - 1]];
+            let filledCorners = 0;
+            for (let [cx, cy] of corners) { if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) { if (grid[cy][cx] !== 0) filledCorners++; } else { filledCorners++; } }
+            return filledCorners;
+        }
+        function checkSpin(piece) {
+            if (piece.type === "O") return null;
+            if (!lastRotationHadKick) return null;
+            const immobile = isImmobile(piece);
+            if (piece.type === "T") {
+                const corners = checkTSpinCorners(piece);
+                if (corners >= 3) { if (corners >= 4) return { name: "T-SPIN", multiplier: 2.0, isFullSpin: true }; else return { name: "T-SPIN MINI", multiplier: 1.5, isFullSpin: false }; }
+            }
+            if (immobile) return { name: `${piece.type}-SPIN MINI`, multiplier: 1.4, isFullSpin: false };
+            return null;
+        }
+        function updateBackToBack(spinBonus, linesCleared) {
+            const isTetris = linesCleared === 4;
+            const isSpin = spinBonus !== null;
+            if (isTetris || isSpin) {
+                if (backToBack) { showPopup("🔥 BACK-TO-BACK! +50% 🔥", "#ffaa44"); return 1.5; }
+                else { backToBack = true; document.getElementById("b2bBadge").classList.add("active"); return 1.0; }
+            } else { backToBack = false; document.getElementById("b2bBadge").classList.remove("active"); return 1.0; }
+        }
+        function checkAllClear() { for (let row = 0; row < ROWS; row++) { for (let col = 0; col < COLS; col++) { if (grid[row][col] !== 0) return false; } } return true; }
+        function clearLines() {
+            let linesCleared = 0;
+            for (let row = ROWS - 1; row >= 0; ) {
+                let full = true;
+                for (let col = 0; col < COLS; col++) { if (grid[row][col] === 0) { full = false; break; } }
+                if (full) { for (let r = row; r > 0; r--) { grid[r] = [...grid[r-1]]; } grid[0] = new Array(COLS).fill(0); linesCleared++; } else { row--; }
+            }
+            return linesCleared;
+        }
+        function calculateLineScore(linesCleared, spinBonus, isAllClear, b2bMultiplier) {
+            let baseScore = [0, 100, 300, 500, 800][linesCleared] || 0;
+            if (spinBonus) { baseScore = Math.floor(baseScore * spinBonus.multiplier); if (spinBonus.isFullSpin) showPopup(`✨ ${spinBonus.name}! ✨ ${spinBonus.multiplier}x`, "#ff66ff"); else showPopup(`✨ ${spinBonus.name}! ✨ ${spinBonus.multiplier}x`, "#ffaa44"); playSpin(); }
+            if (b2bMultiplier > 1) baseScore = Math.floor(baseScore * b2bMultiplier);
+            if (isAllClear) { baseScore += 800; showPopup("🌟 ALL CLEAR! +800 🌟", "#ffff00"); playAllClear(); }
+            if (combo > 0) { let comboBonus = Math.floor(baseScore * (combo * 0.5)); baseScore += comboBonus; showPopup(`${combo}x COMBO! +${comboBonus}`, "#ffaa44"); playCombo(combo); }
+            return baseScore;
+        }
+        
+        function showPopup(message, color, xOffset = 0) { popupMessages.push({ text: message, color: color, x: canvas.width/2 + xOffset, y: canvas.height/2 - 100, life: 60 }); }
+        function updatePopups() { for(let i = popupMessages.length-1; i >= 0; i--) { popupMessages[i].life--; popupMessages[i].y -= 1.5; if(popupMessages[i].life <= 0) popupMessages.splice(i,1); } }
+        function drawPopups() { for(let msg of popupMessages) { ctx.font = `bold ${Math.floor(24 + msg.life/3)}px monospace`; ctx.fillStyle = msg.color; ctx.shadowBlur = 8; ctx.shadowColor = "black"; ctx.fillText(msg.text, msg.x - ctx.measureText(msg.text).width/2, msg.y); ctx.shadowBlur = 0; } }
+        
+        function resizeCanvas() {
+            const maxWidth = window.innerWidth - 80;
+            const maxHeight = window.innerHeight - 120;
+            let block = Math.floor(Math.min(maxWidth / (COLS + 6), maxHeight / ROWS));
+            block = Math.max(28, Math.min(block, 45));
+            BLOCK_SIZE = block;
+            canvas.width = COLS * BLOCK_SIZE + 500;
+            canvas.height = Math.max(ROWS * BLOCK_SIZE + 40, 650);
+            canvas.style.width = `${canvas.width}px`;
+            canvas.style.height = `${canvas.height}px`;
+        }
+        
+        function randomPiece() {
+            if(bag.length === 0){
+                bag = [...SHAPE_KEYS];
+                for(let i=bag.length-1; i>0; i--){
+                    const j = Math.floor(Math.random()*(i+1));
+                    [bag[i], bag[j]] = [bag[j], bag[i]];
+                }
+            }
+            const type = bag.pop(); const data = SHAPES_DATA[type];
+            return { type: type, rotation: 0, matrix: data.matrices[0].map(row => [...row]), color: data.color, x: Math.floor((COLS - data.matrices[0][0].length)/2), y: 0, justRotated: false };
+        }
+        function generateQueue(length=5){ let q = []; for(let i=0;i<length;i++) q.push(randomPiece()); return q; }
+        
+        // ========== FIXED VALID MOVE - Proper game over detection ==========
+        function validMove(piece, dx, dy, newMatrix=null){
+            let mat = newMatrix || piece.matrix;
+            for(let y=0;y<mat.length;y++){
+                for(let x=0;x<mat[0].length;x++){
+                    if(mat[y][x]){
+                        let nx = piece.x + x + dx;
+                        let ny = piece.y + y + dy;
+                        if(nx < 0 || nx >= COLS) return false;
+                        if(ny >= ROWS) return false;
+                        // If piece is above grid (ny < 0), check if any block already exists
+                        if(ny < 0) {
+                            // For game over detection - if piece would spawn above grid
+                            if(piece.y === 0 && dy === 0 && ny < 0) {
+                                return false; // Game over!
+                            }
+                            continue; // Otherwise ignore blocks above grid
+                        }
+                        if(ny >= 0 && grid[ny] && grid[ny][nx] !== 0) return false;
+                    }
+                }
+            }
+            return true;
+        }
+        
+        function rotatePiece(piece, dir=1){
+            const typeData = SHAPES_DATA[piece.type];
+            let newRot = piece.rotation;
+            if(dir===1) newRot = (piece.rotation+1) % typeData.matrices.length;
+            else newRot = (piece.rotation-1+typeData.matrices.length) % typeData.matrices.length;
+            const newMatrix = typeData.matrices[newRot].map(row=>[...row]);
+            let hadKick = false;
+            if(validMove(piece,0,0,newMatrix)){ piece.matrix = newMatrix; piece.rotation = newRot; piece.justRotated = true; lastRotationHadKick = hadKick; playRotate(); return true; }
+            const kicks = piece.type === "I" ? [[0,0],[-2,0],[2,0],[-1,0],[1,0],[0,-1]] : [[0,0],[-1,0],[1,0],[0,-1],[-1,-1],[1,-1]];
+            for(let [kx, ky] of kicks){ if(validMove(piece,kx,ky,newMatrix)){ piece.matrix = newMatrix; piece.rotation = newRot; piece.x += kx; piece.y += ky; piece.justRotated = true; hadKick = true; lastRotationHadKick = hadKick; playRotate(); return true; } }
+            lastRotationHadKick = false; return false;
+        }
+        
+        // ========== FIXED LOCK PIECE with proper game over ==========
+        function lockPiece(){
+            const spinBonus = checkSpin(activePiece);
+            
+            // CRITICAL FIX: Check if any block would be placed outside grid (especially above)
+            let gameOver = false;
+            for(let y=0;y<activePiece.matrix.length;y++){
+                for(let x=0;x<activePiece.matrix[0].length;x++){
+                    if(activePiece.matrix[y][x]){
+                        const gridY = activePiece.y + y;
+                        const gridX = activePiece.x + x;
+                        // If piece is above grid (gridY < 0) OR outside sides, GAME OVER!
+                        if(gridY < 0 || gridY >= ROWS || gridX < 0 || gridX >= COLS){
+                            gameOver = true;
+                            break;
+                        }
+                    }
+                }
+                if(gameOver) break;
+            }
+            
+            if(gameOver){
+                endGame(false);
+                return;
+            }
+            
+            // Lock the piece to grid
+            for(let y=0;y<activePiece.matrix.length;y++){
+                for(let x=0;x<activePiece.matrix[0].length;x++){
+                    if(activePiece.matrix[y][x]){
+                        const gridY = activePiece.y + y;
+                        const gridX = activePiece.x + x;
+                        if(gridY >= 0 && gridY < ROWS && gridX >= 0 && gridX < COLS){
+                            grid[gridY][gridX] = activePiece.color;
+                        }
+                    }
+                }
+            }
+            
+            const linesCleared = clearLines();
+            const isAllClear = checkAllClear();
+            const b2bMultiplier = updateBackToBack(spinBonus, linesCleared);
+            
+            if (linesCleared > 0) {
+                combo++;
+                const lineScore = calculateLineScore(linesCleared, spinBonus, isAllClear, b2bMultiplier);
+                score += lineScore;
+                linesClearedTotal += linesCleared;
+                playLineClear(linesCleared);
+                let clearText = ["", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS!"][linesCleared] || "";
+                showPopup(`${clearText} +${lineScore}`, "#0ff");
+                if (currentMode === "sprint" && linesClearedTotal >= SPRINT_GOAL) { sprintCompleted = true; endGame(true); return; }
+            } else {
+                if (combo > 0) showPopup(`COMBO ENDED! ${combo}x`, "#ff6666");
+                combo = 0;
+            }
+            
+            lastRotationHadKick = false;
+            activePiece = nextQueue.shift();
+            nextQueue.push(randomPiece());
+            activePiece.justRotated = false;
+            canHold = true;
+            isOnGroundFlag = false;
+            lockTimer = 0;
+            lockMoves = 0;
+            leftRepeatTimer = 0;
+            rightRepeatTimer = 0;
+            
+            // CRITICAL FIX: Check if new piece immediately collides (GAME OVER)
+            if(!validMove(activePiece, 0, 0)){
+                endGame(false);
+                return;
+            }
+            
+            // Also check if any part of the new piece is above the grid
+            let pieceAboveGrid = false;
+            for(let y=0;y<activePiece.matrix.length;y++){
+                for(let x=0;x<activePiece.matrix[0].length;x++){
+                    if(activePiece.matrix[y][x]){
+                        if(activePiece.y + y < 0){
+                            pieceAboveGrid = true;
+                            break;
+                        }
+                    }
+                }
+                if(pieceAboveGrid) break;
+            }
+            
+            if(pieceAboveGrid){
+                endGame(false);
+                return;
+            }
+        }
+        
+        function hardDrop(){ while(validMove(activePiece,0,1)) activePiece.y++; playHardDrop(); lockPiece(); }
+        function getGhostY(){ let ghostY = activePiece.y; while(validMove(activePiece,0,ghostY - activePiece.y +1)) ghostY++; return ghostY; }
+        
+        function drawBlock(x, y, size, color, isGhost = false) {
+            if (isGhost) { ctx.fillStyle = color; ctx.globalAlpha = 0.3; ctx.fillRect(x, y, size-1, size-1); ctx.globalAlpha = 1; ctx.strokeStyle = "#ffffff"; ctx.strokeRect(x, y, size-1, size-1); return; }
+            ctx.fillStyle = color; ctx.fillRect(x, y, size-1, size-1);
+            ctx.fillStyle = `rgba(255,255,255,0.4)`; ctx.fillRect(x, y, size-1, 3); ctx.fillRect(x, y, 3, size-1);
+            ctx.fillStyle = `rgba(0,0,0,0.3)`; ctx.fillRect(x, y+size-4, size-1, 3); ctx.fillRect(x+size-4, y, 3, size-1);
+            ctx.fillStyle = `rgba(255,255,255,0.2)`; ctx.fillRect(x+3, y+3, size-7, size-7);
+            ctx.strokeStyle = "#000000"; ctx.lineWidth = 1; ctx.strokeRect(x, y, size-1, size-1);
+        }
+        function drawRoundedRect(x, y, w, h, r, color) { ctx.beginPath(); ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r); ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h); ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r); ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y); ctx.closePath(); ctx.fillStyle = color; ctx.fill(); }
+        
+        function draw() {
+            if(!ctx) return;
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+            grad.addColorStop(0,"#0a0f1e"); grad.addColorStop(1,"#03060c");
+            ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+            
+            const boardWidth = COLS * BLOCK_SIZE;
+            const boardHeight = ROWS * BLOCK_SIZE;
+            const boardX = 200;
+            const boardY = 20;
+            
+            drawRoundedRect(15, boardY, 160, boardHeight + 80, 12, "#1a1f2e");
+            ctx.fillStyle = "#0ff"; ctx.font = `bold 22px monospace`; ctx.fillText("HOLD", 65, boardY + 40);
+            
+            if(holdPiece){
+                const holdSize = BLOCK_SIZE * 0.8;
+                const matrix = holdPiece.matrix;
+                const startX = 50 + (160 - (matrix[0].length * holdSize)) / 2;
+                const startY = boardY + 70;
+                for(let y=0;y<matrix.length;y++){ for(let x=0;x<matrix[0].length;x++){ if(matrix[y][x]) drawBlock(startX + x*holdSize, startY + y*holdSize, holdSize, holdPiece.color); } }
+            }
+            
+            ctx.fillStyle = "#0ff"; ctx.font = `18px monospace`; ctx.fillText("SCORE", 40, boardY + 210);
+            ctx.fillStyle = "#ffe484"; ctx.font = `26px monospace`; ctx.fillText(score, 40, boardY + 250);
+            ctx.fillStyle = "#0ff"; ctx.font = `18px monospace`; ctx.fillText("LEVEL", 40, boardY + 300);
+            
+            let gravity = getGravity();
+            let speedColor = gravity >= 500 ? "#ff0000" : (gravity >= 200 ? "#ff6600" : "#ffaa44");
+            ctx.fillStyle = speedColor;
+            ctx.font = gravity >= 500 ? `bold 26px monospace` : `26px monospace`;
+            ctx.fillText(level, 40, boardY + 335);
+            
+            if (gravity >= 500) { ctx.fillStyle = "#ff0000"; ctx.font = `bold 14px monospace`; ctx.fillText(`⚡ ${gravity}G IMPOSSIBLE! ⚡`, 40, boardY + 370); }
+            else if (gravity >= 200) { ctx.fillStyle = "#ff6600"; ctx.font = `bold 14px monospace`; ctx.fillText(`⚡ ${gravity}G INSANE! ⚡`, 40, boardY + 370); }
+            else if (gravity >= 100) { ctx.fillStyle = "#ffaa44"; ctx.font = `bold 14px monospace`; ctx.fillText(`⚡ ${gravity}G EXTREME! ⚡`, 40, boardY + 370); }
+            else { ctx.fillStyle = "#88ff88"; ctx.font = `14px monospace`; ctx.fillText(`${gravity}G gravity`, 40, boardY + 370); }
+            
+            if(combo > 0) { ctx.fillStyle = "#ffaa44"; ctx.font = `bold 20px monospace`; ctx.fillText(`${combo}x COMBO!`, 40, boardY + 410); }
+            if (backToBack) { ctx.fillStyle = "#ffaa44"; ctx.font = `bold 16px monospace`; ctx.fillText("BACK-TO-BACK", 40, boardY + 450); }
+            
+            ctx.fillStyle = "#0ff"; ctx.font = `18px monospace`; ctx.fillText("TIME", 40, boardY + 490);
+            const mins = Math.floor(elapsedTimeSec/60); const secs = elapsedTimeSec%60;
+            ctx.fillStyle = "#fff"; ctx.font = `22px monospace`; ctx.fillText(`${mins}:${secs<10?'0'+secs:secs}`, 40, boardY + 525);
+            ctx.fillStyle = "#88aaff"; ctx.font = "14px monospace"; ctx.fillText(playerName, 40, boardY + 570);
+            
+            drawRoundedRect(boardX-5, boardY-5, boardWidth+10, boardHeight+10, 10, "#0d0d15");
+            for(let row=0;row<ROWS;row++){ for(let col=0;col<COLS;col++){ const x = boardX + col*BLOCK_SIZE; const y = boardY + row*BLOCK_SIZE; if(grid[row][col] !== 0){ drawBlock(x, y, BLOCK_SIZE, grid[row][col]); } else { ctx.strokeStyle = "#22223a"; ctx.lineWidth = 0.5; ctx.strokeRect(x, y, BLOCK_SIZE, BLOCK_SIZE); } } }
+            
+            if(activePiece){
+                const ghostY = getGhostY();
+                for(let y=0;y<activePiece.matrix.length;y++){ for(let x=0;x<activePiece.matrix[0].length;x++){ if(activePiece.matrix[y][x]){ const blockX = boardX + (activePiece.x+x)*BLOCK_SIZE; const blockY = boardY + (ghostY+y)*BLOCK_SIZE; drawBlock(blockX, blockY, BLOCK_SIZE, activePiece.color, true); } } }
+                for(let y=0;y<activePiece.matrix.length;y++){ for(let x=0;x<activePiece.matrix[0].length;x++){ if(activePiece.matrix[y][x]){ const blockX = boardX + (activePiece.x+x)*BLOCK_SIZE; const blockY = boardY + (activePiece.y+y)*BLOCK_SIZE; drawBlock(blockX, blockY, BLOCK_SIZE, activePiece.color); } } }
+            }
+            
+            ctx.strokeStyle = "#0ff"; ctx.lineWidth = 3; ctx.strokeRect(boardX-3, boardY-3, boardWidth+6, boardHeight+6);
+            
+            const rightX = boardX + boardWidth + 25;
+            drawRoundedRect(rightX-5, boardY, 180, boardHeight + 80, 12, "#1a1f2e");
+            ctx.fillStyle = "#0ff"; ctx.font = `bold 22px monospace`; ctx.fillText("NEXT", rightX + 55, boardY + 40);
+            const nextPieceSize = BLOCK_SIZE * 0.7;
+            for(let i=0;i<Math.min(4,nextQueue.length);i++){ const piece = nextQueue[i]; const matrix = piece.matrix; const startX = rightX + (180 - (matrix[0].length * nextPieceSize)) / 2; const startY = boardY + 80 + i * (nextPieceSize * 3.5); for(let y=0;y<matrix.length;y++){ for(let x=0;x<matrix[0].length;x++){ if(matrix[y][x]) drawBlock(startX + x*nextPieceSize, startY + y*nextPieceSize, nextPieceSize, piece.color); } } }
+            
+            if(currentMode === "sprint"){
+                const barX = rightX + 65; const barY = boardY + 80 + (4 * (nextPieceSize * 3.5)) + 20; const barW = 35; const barH = 100; const ratio = Math.min(1, linesClearedTotal/SPRINT_GOAL);
+                drawRoundedRect(barX-3, barY-3, barW+6, barH+6, 6, "#0a0a12"); ctx.fillStyle = "#2a2f44"; ctx.fillRect(barX, barY, barW, barH); ctx.fillStyle = "#0ff"; ctx.fillRect(barX, barY+barH-(barH*ratio), barW, barH*ratio); ctx.strokeStyle = "#fff"; ctx.strokeRect(barX, barY, barW, barH);
+                ctx.fillStyle = "#0ff"; ctx.font = `12px monospace`; ctx.fillText(`${linesClearedTotal}/${SPRINT_GOAL}`, barX-8, barY+barH+15); ctx.fillStyle = "#ff0"; ctx.font = `10px monospace`; ctx.fillText("PROGRESS", barX-2, barY-5);
+            }
+            drawPopups();
+            
+            if (isPaused && gameActive) {
+                ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.font = "bold 48px monospace"; ctx.fillStyle = "#0ff"; ctx.textAlign = "center"; ctx.fillText("⏸ PAUSED", canvas.width/2, canvas.height/2 - 50);
+                ctx.font = "24px monospace"; ctx.fillStyle = "#fff"; ctx.fillText("Press P or click PAUSE to resume", canvas.width/2, canvas.height/2 + 30);
+                ctx.textAlign = "left";
+            }
+        }
+        
+        function updateGame(now){
+            if(!gameActive || isPaused) { draw(); requestAnimationFrame((t) => { if(gameActive) updateGame(t); }); return; }
+            
+            let dt = Math.min(100, now - lastTimestamp);
+            if(dt<=0) { lastTimestamp=now; requestAnimationFrame((t) => { if(gameActive) updateGame(t); }); return; }
+            elapsedTimeSec += dt/1000; lastTimestamp = now; updatePopups();
+            
+            const currentTime = now;
+            
+            if (leftPressed) {
+                if (leftRepeatTimer === 0) { if (validMove(activePiece, -1, 0)) { activePiece.x--; if (isOnGroundFlag && lockMoves < MAX_LOCK_MOVES) { lockTimer = 0; lockMoves++; } playMove(); } leftRepeatTimer = currentTime; lastLeftMove = currentTime; }
+                else if (currentTime - leftRepeatTimer > dasDelay) { if (currentTime - lastLeftMove > arrDelay) { if (validMove(activePiece, -1, 0)) { activePiece.x--; if (isOnGroundFlag && lockMoves < MAX_LOCK_MOVES) { lockTimer = 0; lockMoves++; } playMove(); } lastLeftMove = currentTime; } }
+            } else { leftRepeatTimer = 0; lastLeftMove = 0; }
+            
+            if (rightPressed) {
+                if (rightRepeatTimer === 0) { if (validMove(activePiece, 1, 0)) { activePiece.x++; if (isOnGroundFlag && lockMoves < MAX_LOCK_MOVES) { lockTimer = 0; lockMoves++; } playMove(); } rightRepeatTimer = currentTime; lastRightMove = currentTime; }
+                else if (currentTime - rightRepeatTimer > dasDelay) { if (currentTime - lastRightMove > arrDelay) { if (validMove(activePiece, 1, 0)) { activePiece.x++; if (isOnGroundFlag && lockMoves < MAX_LOCK_MOVES) { lockTimer = 0; lockMoves++; } playMove(); } lastRightMove = currentTime; } }
+            } else { rightRepeatTimer = 0; lastRightMove = 0; }
+            
+            let currentSpeed = softDropPressed ? softDropSpeed : getFallSpeed();
+            if(now - lastFallTime > currentSpeed){
+                if(validMove(activePiece,0,1)){ activePiece.y++; isOnGroundFlag=false; lockTimer=0; lockMoves=0; } else { isOnGroundFlag=true; }
+                lastFallTime = now;
+            }
+            
+            if(isOnGroundFlag){ lockTimer += dt; if(lockTimer > lockDelay){ lockPiece(); lastFallTime = now; } }
+            draw(); requestAnimationFrame((t) => { if(gameActive) updateGame(t); });
+        }
+        
+        function holdCurrent(){
+            if(!canHold || !gameActive || isPaused) return;
+            if(holdPiece === null){ holdPiece = activePiece; activePiece = nextQueue.shift(); nextQueue.push(randomPiece()); }
+            else { let temp = activePiece; activePiece = holdPiece; holdPiece = temp; }
+            activePiece.x = Math.floor((COLS - activePiece.matrix[0].length)/2); activePiece.y = 0; activePiece.justRotated = false;
+            if(!validMove(activePiece,0,0)) endGame(false);
+            canHold = false; isOnGroundFlag = false; lockTimer = 0; lockMoves = 0; lastRotationHadKick = false; leftRepeatTimer = 0; rightRepeatTimer = 0;
+        }
+        
+        function togglePause() { if (!gameActive) return; isPaused = !isPaused; const pauseBtn = document.getElementById("pauseBtn"); if (pauseBtn) pauseBtn.innerHTML = isPaused ? "▶️ RESUME" : "⏸️ PAUSE"; if (!isPaused) { lastTimestamp = performance.now(); lastFallTime = performance.now(); leftRepeatTimer = 0; rightRepeatTimer = 0; if (soundEnabled && musicEnabled) startMusic(); } else { stopMusic(); } draw(); }
+        function quitGame() { stopMusic(); window.close(); if (!window.closed) { document.body.innerHTML = '<h1 style="color:cyan;text-align:center;margin-top:50vh;">You can close this tab now</h1>'; setTimeout(() => { window.location.href = 'about:blank'; }, 100); } }
+        
+        function endGame(sprintSuccess=false){
+            gameActive = false;
+            playGameOver();
+            stopMusic();
+            const pauseBtn = document.getElementById("pauseBtn");
+            if (pauseBtn) pauseBtn.classList.remove("visible");
+            if(gameLoopId) cancelAnimationFrame(gameLoopId);
+            if(currentMode === "sprint") { if(sprintSuccess) saveScoreToFirebase(playerName, Math.floor(elapsedTimeSec), "sprint"); }
+            else { saveScoreToFirebase(playerName, score, "infinite"); }
+            uiState = "gameover";
+            drawGameOver();
+        }
+        
+        function drawGameOver(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#000000cc";
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.font = "bold 42px monospace"; ctx.fillStyle = "#0ff"; ctx.fillText("GAME OVER", canvas.width/2-140, 150);
+            ctx.font = "24px monospace"; ctx.fillStyle = "#fff";
+            if(currentMode === "sprint" && sprintCompleted) { ctx.fillText(`${playerName} - ${Math.floor(elapsedTimeSec)} seconds - COMPLETED!`, canvas.width/2-220, 230); }
+            else if(currentMode === "sprint") { ctx.fillText(`${playerName} - ${linesClearedTotal}/40 lines - FAILED`, canvas.width/2-200, 230); }
+            else { ctx.fillText(`${playerName} - ${score} pts`, canvas.width/2-140, 230); }
+            ctx.fillText("TOP 10 LEADERBOARD", canvas.width/2-120, 300);
+            let leader = currentMode === "sprint" ? leaderboardSprint : leaderboardInfinite;
+            for(let i=0;i<Math.min(10,leader.length);i++){ let entry = leader[i]; let line = `${i+1}. ${entry.name} ${currentMode==="sprint"? entry.score+"s" : entry.score}`; ctx.fillText(line, canvas.width/2-130, 350 + i*28); }
+            if(leader.length === 0) ctx.fillText("No scores yet. Be the first!", canvas.width/2-150, 350);
+            ctx.font = "18px monospace"; ctx.fillStyle = "#0ff"; ctx.fillText("Press ENTER to return", canvas.width/2-140, canvas.height-100);
+            ctx.fillStyle = "#ffaa44"; ctx.font = "14px monospace"; let finalGravity = getGravity();
+            ctx.fillText(`🏆 Level ${level} | ${finalGravity}G Gravity | Speed: ${getFallSpeed().toFixed(1)}ms`, canvas.width/2-200, canvas.height-60);
+        }
+        
+        // ========== SETTINGS & ADMIN (minimal but functional) ==========
+        function openSettingsModal() {
+            const modal = document.createElement('div'); modal.className = 'settings-modal';
+            modal.innerHTML = `<span class="close-settings" onclick="this.parentElement.remove()">&times;</span><h3>⚙️ GAME SETTINGS</h3>
+                <div class="settings-section"><h4>🎨 COLOR THEME</h4><div class="theme-buttons">
+                    <div class="theme-btn theme-cyan" onclick="changeTheme('cyan')">CYAN</div><div class="theme-btn theme-purple" onclick="changeTheme('purple')">PURPLE</div>
+                    <div class="theme-btn theme-green" onclick="changeTheme('green')">GREEN</div><div class="theme-btn theme-red" onclick="changeTheme('red')">RED</div>
+                    <div class="theme-btn theme-orange" onclick="changeTheme('orange')">ORANGE</div></div></div>
+                <div class="settings-section"><h4>🎵 MUSIC SELECTION</h4><div class="music-list">
+                    ${Object.entries(musicTracks).map(([id, track]) => `<div class="music-item ${currentTrackId === id ? 'active' : ''}" onclick="selectMusic('${id}')"><span class="name">${track.name}</span><button class="play-btn" onclick="event.stopPropagation(); playPreviewMusic('${id}')">▶️ Preview</button></div>`).join('')}
+                    <div class="music-item"><span class="name">🎵 Custom Music (Upload)</span><input type="file" id="customMusicUpload" accept="audio/mp3, audio/wav, audio/ogg" style="display:none;"><button class="play-btn" onclick="document.getElementById('customMusicUpload').click()">📁 Upload</button></div></div></div>
+                <div class="settings-section"><h4>🔊 VOLUME</h4><input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="${musicVolume * 100}"><div style="text-align:center; margin-top:5px;">Music Volume: ${Math.floor(musicVolume * 100)}%</div></div>
+                <div style="text-align:center; margin-top:20px;"><button onclick="this.closest('.settings-modal').remove()" style="background:cyan; color:black; padding:10px 30px; border:none; border-radius:10px; cursor:pointer;">CLOSE</button></div>`;
+            document.body.appendChild(modal);
+            const slider = document.getElementById('volumeSlider');
+            slider.addEventListener('input', (e) => { musicVolume = e.target.value / 100; document.querySelector('.volume-slider').parentElement.querySelector('div').innerText = `Music Volume: ${Math.floor(musicVolume * 100)}%`; localStorage.setItem("tetris_music_volume", musicVolume); });
+        }
+        
+        window.changeTheme = function(theme) { document.body.className = `theme-${theme}`; localStorage.setItem("tetris_theme", theme); const modal = document.querySelector('.settings-modal'); if (modal) modal.remove(); showPopup(`Theme changed to ${theme.toUpperCase()}!`, "#0ff"); };
+        window.selectMusic = function(trackId) { changeMusic(trackId); const modal = document.querySelector('.settings-modal'); if (modal) modal.remove(); showPopup(`Music changed to ${musicTracks[trackId].name}!`, "#0f0"); };
+        window.playPreviewMusic = function(trackId) { const track = musicTracks[trackId]; if (!track) return; for (let i = 0; i < Math.min(8, track.notes.length); i++) { setTimeout(() => { if (track.notes[i] > 0) playBeep(track.notes[i], 0.2, 0.2, 'square'); }, i * 200); } };
+        
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'customMusicUpload') {
+                const file = e.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    if (window.customAudio) window.customAudio.pause();
+                    window.customAudio = new Audio(url); window.customAudio.loop = true; window.customAudio.volume = musicVolume;
+                    currentTrackId = 'custom';
+                    if (gameActive && !isPaused && uiState === "game" && soundEnabled && musicEnabled) if (window.customAudio) window.customAudio.play();
+                    showPopup("✅ Custom music loaded!", "#0f0"); const modal = document.querySelector('.settings-modal'); if (modal) modal.remove();
+                }
+            }
+        });
+        
+        const originalStartMusic = startMusic;
+        window.startMusic = startMusic = function() { if (currentTrackId === 'custom' && window.customAudio) { if (gameActive && !isPaused && uiState === "game" && soundEnabled && musicEnabled) window.customAudio.play(); return; } originalStartMusic(); };
+        window.stopMusic = stopMusic = function() { if (window.customAudio) window.customAudio.pause(); if (musicInterval) clearInterval(musicInterval); musicInterval = null; };
+        
+        function openAdminModal() { if (!isAdmin) { adminLogin(); return; } adminModalOpen = true; drawAdminModal(); }
+        function drawAdminModal() { const existingModal = document.getElementById("adminModal"); if(existingModal) existingModal.remove(); const modal = document.createElement("div"); modal.id = "adminModal"; modal.className = "admin-modal"; modal.innerHTML = `<span class="close-modal" onclick="window.closeAdminModal()">&times;</span><h3>🔧 ADMIN CONTROL PANEL</h3><div style="display:flex; gap:10px; margin-bottom:20px;"><button onclick="window.setAdminTab('infinite')" style="background:${adminTab==='infinite'?'cyan':'#1a1f2e'}">🏆 INFINITE MODE</button><button onclick="window.setAdminTab('sprint')" style="background:${adminTab==='sprint'?'cyan':'#1a1f2e'}">⏱️ SPRINT MODE</button></div><div id="adminContent"></div><div class="sync-status">${firebaseInitialized ? "✅ Connected to Firebase" : "⚠️ Local storage only"}</div>`; document.body.appendChild(modal); updateAdminContent(); }
+        function updateAdminContent() { const container = document.getElementById("adminContent"); if(!container) return; const leaderboard = adminTab === "infinite" ? leaderboardInfinite : leaderboardSprint; const isSprint = adminTab === "sprint"; container.innerHTML = `<div style="margin-bottom:15px;"><button onclick="window.refreshLeaderboard()" style="background:#44aaff;">🔄 Refresh</button><button onclick="window.clearCurrentLeaderboard()" style="background:#ff4444;">🗑️ Clear All</button><button onclick="window.logoutAdmin()" style="background:#ffaa44;">🚪 Logout</button></div><div style="display:flex; padding:10px; background:#0a0f1e;"><div style="width:40px;">#</div><div style="flex:2;">NAME</div><div style="flex:1; text-align:right;">SCORE</div><div style="width:80px;">ACTIONS</div></div>${leaderboard.map((entry, index) => `<div style="display:flex; justify-content:space-between; padding:10px; margin:5px 0; background:#1a1f2e;"><div style="width:40px;">${index+1}</div><div style="flex:2;">${escapeHtml(entry.name)}</div><div style="flex:1; text-align:right;">${entry.score}${isSprint ? 's' : ''}</div><div><button class="delete-btn" onclick="window.deleteEntry(${index})">🗑️</button></div></div>`).join('')}<div style="margin-top:20px; padding:15px; background:#1a1f2e;"><h4>➕ Add New Entry</h4><input type="text" id="newName" placeholder="Name" style="width:150px;"><input type="number" id="newScore" placeholder="Score" style="width:100px;"><button onclick="window.addNewEntry()">➕ Add</button></div>`; }
+        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+        window.deleteEntry = function(index) { if (!isAdmin) return; if(confirm(`Delete entry #${index+1}?`)) { const leaderboard = adminTab === "infinite" ? leaderboardInfinite : leaderboardSprint; leaderboard.splice(index,1); localStorage.setItem(`tetris_${adminTab}_lead`, JSON.stringify(leaderboard)); if(firebaseInitialized) database.ref(adminTab === "sprint" ? 'leaderboard/sprint' : 'leaderboard/infinite').set(leaderboard); updateAdminContent(); if(uiState === "menu") updateMenuLeaderboard(); showPopup("🗑️ Entry deleted!", "#ff6666"); } };
+        window.addNewEntry = function() { if (!isAdmin) return; const nameInput = document.getElementById("newName"); const scoreInput = document.getElementById("newScore"); if(nameInput && scoreInput && nameInput.value.trim() && scoreInput.value) { const leaderboard = adminTab === "infinite" ? leaderboardInfinite : leaderboardSprint; leaderboard.push({ name: nameInput.value.trim(), score: parseInt(scoreInput.value) }); if(adminTab === "sprint") leaderboard.sort((a,b) => a.score - b.score); else leaderboard.sort((a,b) => b.score - a.score); while(leaderboard.length > 10) leaderboard.pop(); localStorage.setItem(`tetris_${adminTab}_lead`, JSON.stringify(leaderboard)); if(firebaseInitialized) database.ref(adminTab === "sprint" ? 'leaderboard/sprint' : 'leaderboard/infinite').set(leaderboard); updateAdminContent(); if(uiState === "menu") updateMenuLeaderboard(); showPopup("➕ New entry added!", "#0f0"); nameInput.value = ""; scoreInput.value = ""; } };
+        window.refreshLeaderboard = function() { loadOnlineLeaderboards(); showPopup("🔄 Refreshed!", "#0ff"); setTimeout(() => updateAdminContent(), 500); };
+        window.clearCurrentLeaderboard = function() { if (!isAdmin) return; if(confirm(`⚠️ Clear ${adminTab.toUpperCase()} leaderboard?`)) { if(adminTab === "infinite") leaderboardInfinite = []; else leaderboardSprint = []; localStorage.setItem(`tetris_${adminTab}_lead`, JSON.stringify([])); if(firebaseInitialized) database.ref(adminTab === "sprint" ? 'leaderboard/sprint' : 'leaderboard/infinite').set([]); updateAdminContent(); if(uiState === "menu") updateMenuLeaderboard(); showPopup("🗑️ Cleared!", "#ff6666"); } };
+        window.logoutAdmin = function() { if (auth) auth.signOut().then(() => { isAdmin = false; currentUser = null; closeAdminModal(); showPopup("🔒 Logged out", "#ffaa44"); }); };
+        window.setAdminTab = function(tab) { adminTab = tab; updateAdminContent(); };
+        window.closeAdminModal = function() { const modal = document.getElementById("adminModal"); if(modal) modal.remove(); adminModalOpen = false; };
+        
+        function startGame(name, mode){
+            playerName = name || "PRO"; currentMode = mode; sprintCompleted = false; isPaused = false; backToBack = false;
+            grid = Array(ROWS).fill().map(()=>Array(COLS).fill(0)); bag = []; nextQueue = generateQueue(5); activePiece = randomPiece();
+            holdPiece = null; canHold = true; score = 0; linesClearedTotal = 0; elapsedTimeSec = 0; combo = 0;
+            leftPressed=false; rightPressed=false; softDropPressed=false; leftRepeatTimer=0; rightRepeatTimer=0;
+            isOnGroundFlag=false; lockTimer=0; lastFallTime = performance.now(); lastTimestamp = performance.now();
+            gameActive = true; uiState = "game"; popupMessages = []; lastRotationHadKick = false;
+            const pauseBtn = document.getElementById("pauseBtn"); if (pauseBtn) { pauseBtn.classList.add("visible"); pauseBtn.innerHTML = "⏸️ PAUSE"; }
+            if (soundEnabled && musicEnabled) startMusic();
+            if(gameLoopId) cancelAnimationFrame(gameLoopId);
+            function step(now){ if(gameActive) updateGame(now); else if(uiState === "gameover"){ drawGameOver(); requestAnimationFrame(step); } else { drawMenu(); } }
+            gameLoopId = requestAnimationFrame(step);
+        }
+        
+        function drawMenu(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+            grad.addColorStop(0,"#0a0f1e"); grad.addColorStop(1,"#010101");
+            ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.font = "bold 48px monospace"; ctx.fillStyle = "#0ff"; ctx.fillText("TETRIS PRO", canvas.width/2-160, 100);
+            for(let i=0;i<menuOptions.length;i++){ let y = 200 + i*60; let isSelected = (menuSelection === i); if(isSelected){ ctx.fillStyle = "#0ff"; ctx.fillRect(canvas.width/2-140, y-12, 280, 45); ctx.fillStyle = "#000"; } else { ctx.fillStyle = "#ccc"; } ctx.font = "28px monospace"; ctx.fillText(menuOptions[i], canvas.width/2-120, y+12); }
+            if(inputName){ ctx.font = "22px monospace"; ctx.fillStyle = "#ffd966"; ctx.fillText(`👤 ${inputName}`, canvas.width/2-60, 580); }
+            else { ctx.font = "18px monospace"; ctx.fillStyle = "#aaa"; ctx.fillText("PRESS 'N' TO SET YOUR NAME", canvas.width/2-140, 580); }
+            updateMenuLeaderboard();
+        }
+        
+        function handleMenuKey(e){
+            if(e.key === "ArrowUp"){ menuSelection = (menuSelection-1+menuOptions.length)%menuOptions.length; drawMenu(); }
+            else if(e.key === "ArrowDown"){ menuSelection = (menuSelection+1)%menuOptions.length; drawMenu(); }
+            else if(e.key === "Enter"){
+                let opt = menuOptions[menuSelection];
+                if(opt === "INFINITE MODE"){ if(!inputName) inputName = "PRO"; startGame(inputName, "infinite"); }
+                else if(opt === "40 LINES SPRINT"){ if(!inputName) inputName = "PRO"; startGame(inputName, "sprint"); }
+                else if(opt === "ENTER NAME"){ let newName = prompt("Enter your name (max 10 chars)", inputName||"PRO"); if(newName && newName.length) inputName = newName.slice(0,10); drawMenu(); }
+                else if(opt === "RULES"){ alert("🔹 TETRIS PRO 🔹\n\n⚡ INFINITE SPEED SYSTEM\n• Level up every 500 points!\n• Speed = 500 × (0.82 ^ level)\n• Level 30: 1.3ms (770G)\n• Level 40: 0.18ms (2777G)\n\n🎯 SPIN SYSTEM\n• T-SPIN: 2.0x / T-SPIN MINI: 1.5x\n• L/J/S/Z/I SPIN MINI: 1.4x\n• O BLOCK: CANNOT SPIN!\n• BACK-TO-BACK: +50% bonus\n\n🎵 MUSIC: 5 built-in tracks + custom upload\n🎨 THEMES: 5 color schemes"); }
+                else if(opt === "SETTINGS"){ openSettingsModal(); }
+                else if(opt === "QUIT"){ quitGame(); }
+            }
+            else if(e.key === "n" || e.key === "N"){ let newName = prompt("Enter your name", inputName||"PRO"); if(newName) inputName = newName.slice(0,10); drawMenu(); }
+        }
+        
+        function loadLeaderboards(){
+            const savedInf = localStorage.getItem("tetris_infinite_lead"); if(savedInf) leaderboardInfinite = JSON.parse(savedInf); else leaderboardInfinite = [];
+            const savedSpr = localStorage.getItem("tetris_sprint_lead"); if(savedSpr) leaderboardSprint = JSON.parse(savedSpr); else leaderboardSprint = [];
+            if (uiState === "menu") updateMenuLeaderboard();
+            const savedTheme = localStorage.getItem("tetris_theme"); if (savedTheme) changeTheme(savedTheme);
+            const savedTrack = localStorage.getItem("tetris_music_track"); if (savedTrack && musicTracks[savedTrack]) currentTrackId = savedTrack;
+            const savedVolume = localStorage.getItem("tetris_music_volume"); if (savedVolume) musicVolume = parseFloat(savedVolume);
+        }
+        
+        document.getElementById("soundToggle").addEventListener("click", () => { soundEnabled = !soundEnabled; document.getElementById("soundToggle").innerHTML = soundEnabled ? "🔊 SOUND ON" : "🔇 MUTE"; if (soundEnabled) { initAudio(); playBeep(523.25, 0.1, 0.2); if (gameActive && !isPaused && uiState === "game") startMusic(); } else { stopMusic(); } });
+        document.getElementById("pauseBtn").addEventListener("click", () => { if (gameActive && uiState === "game") togglePause(); });
+        document.getElementById("settingsBtn").addEventListener("click", () => openSettingsModal());
+        document.getElementById("adminBtn").addEventListener("click", () => openAdminModal());
+        
+        window.closeAdminModal = closeAdminModal; window.setAdminTab = setAdminTab; window.deleteEntry = deleteEntry; window.addNewEntry = addNewEntry;
+        window.refreshLeaderboard = refreshLeaderboard; window.clearCurrentLeaderboard = clearCurrentLeaderboard; window.logoutAdmin = logoutAdmin;
+        
+        loadLeaderboards(); initFirebase(); resizeCanvas(); drawMenu();
+        document.body.addEventListener('click', () => { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
+        
+        window.addEventListener("keydown", (e) => {
+            const activeElement = document.activeElement; const isTyping = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+            const key = e.key; const gameKeys = ["ArrowLeft","ArrowRight","ArrowDown","ArrowUp"," ","Space","z","Z","x","X","c","C","Escape","p","P"];
+            if (!isTyping && (gameKeys.includes(key) || key === " " || key === "Space")) e.preventDefault();
+            if (isTyping) return;
+            if ((key === "p" || key === "P") && uiState === "game" && gameActive) { togglePause(); return; }
+            if(uiState === "menu"){ handleMenuKey(e); return; }
+            if(uiState === "gameover" && (key === "Enter" || key === "ENTER")){ uiState = "menu"; drawMenu(); if(gameLoopId) cancelAnimationFrame(gameLoopId); gameActive=false; return; }
+            if(uiState !== "game") return; if (isPaused) return;
+            if(key === "ArrowLeft"){ leftPressed=true; leftRepeatTimer=0; }
+            else if(key === "ArrowRight"){ rightPressed=true; rightRepeatTimer=0; }
+            else if(key === "ArrowDown"){ softDropPressed=true; }
+            else if(key === "ArrowUp" || key === "x" || key === "X"){ rotatePiece(activePiece,1); if(isOnGroundFlag && lockMoves<MAX_LOCK_MOVES){ lockTimer=0; lockMoves++; } }
+            else if(key === "z" || key === "Z"){ rotatePiece(activePiece,-1); if(isOnGroundFlag && lockMoves<MAX_LOCK_MOVES){ lockTimer=0; lockMoves++; } }
+            else if(key === " " || key === "Space"){ hardDrop(); lastFallTime=performance.now(); }
+            else if(key === "c" || key === "C"){ holdCurrent(); }
+            else if(key === "Escape"){ uiState="menu"; drawMenu(); if(gameLoopId) cancelAnimationFrame(gameLoopId); gameActive=false; stopMusic(); }
+        });
+        
+        window.addEventListener("keyup", (e)=>{ if(uiState!=="game") return; if(e.key === "ArrowLeft"){ leftPressed=false; leftRepeatTimer=0; } if(e.key === "ArrowRight"){ rightPressed=false; rightRepeatTimer=0; } if(e.key === "ArrowDown"){ softDropPressed=false; } });
+        window.addEventListener("resize", ()=>{ resizeCanvas(); if(uiState==="menu") drawMenu(); else if(uiState==="gameover") drawGameOver(); else if(uiState==="game") draw(); });
+    })();
+</script>
+</body>
+</html>
