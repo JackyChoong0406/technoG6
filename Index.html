@@ -4,49 +4,163 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Game Hub</title>
+
 <style>
-:root { --primary:#38bdf8; --bg:#0f172a; --panel:#1e293b; --success:#22c55e; }
-body { font-family:'Segoe UI'; background:var(--bg); color:white; text-align:center; margin:0; }
-.header { padding:20px; background:var(--panel); display:flex; justify-content:center; align-items: center; gap: 30px; flex-wrap: wrap; }
-.card { background:var(--panel); padding:20px; border-radius:12px; margin:20px auto; width:300px; position: relative; }
-input { padding:10px; margin:10px; width:80%; border-radius:8px; border:none; }
-button { padding:10px 20px; background:var(--primary); border:none; border-radius:8px; cursor:pointer; font-weight: bold; }
-.level { background:#1e293b; padding:15px; margin:10px; border-radius:10px; cursor:pointer; transition: 0.3s; border: 1px solid transparent; }
-.level:hover { border-color: var(--primary); }
-.locked { opacity:0.3; cursor: not-allowed; filter: grayscale(1); }
+:root { --primary:#38bdf8; --bg:#0f172a; --panel:#1e293b; --success:#22c55e; --danger:#ff375f; }
 
-.top-right-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 10px; z-index: 10; }
-.mini-btn { padding: 5px 10px; font-size: 0.75rem; background: #475569; color: white; border-radius: 4px; border: none; cursor: pointer; }
-.logout-btn { background: #f43f5e; color: white; padding: 5px 15px; font-size: 0.85rem; }
-
-.selection-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(15, 23, 42, 0.98); z-index: 2000;
-    display: none; flex-direction: column; align-items: center; padding: 20px;
-    overflow-y: auto;
-}
-.selection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 500px; margin-top: 20px; }
-.select-card { 
-    background: #1e293b; padding: 15px; border: 2px solid #334155; 
-    border-radius: 10px; cursor: pointer; text-align: left;
-}
-.select-card.selected { border-color: #22c55e; background: #064e3b; }
-.select-card.locked {
-    opacity: 0.3;
-    pointer-events: none;
-    filter: grayscale(1);
+body {
+    font-family:'Segoe UI';
+    background:var(--bg);
+    color:white;
+    text-align:center;
+    margin:0;
 }
 
-.difficulty-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-top: 5px; display: inline-block; }
-.tag-easy { background: #166534; color: #bbf7d0; }
-.tag-hard { background: #991b1b; color: #fecaca; }
-.section-title { color: var(--primary); margin-top: 30px; border-bottom: 1px solid #334155; width: 100%; max-width: 500px; padding-bottom: 5px; }
+.header {
+    padding:20px;
+    background:var(--panel);
+    display:flex;
+    justify-content:space-around;
+}
+
+.card {
+    background:var(--panel);
+    padding:20px;
+    border-radius:12px;
+    margin:20px auto;
+    width:300px;
+}
+
+input {
+    padding:10px;
+    margin:10px;
+    width:80%;
+    border-radius:8px;
+    border:none;
+}
+
+button {
+    padding:10px 20px;
+    background:var(--primary);
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+button:disabled {
+    opacity:0.4;
+    cursor:not-allowed;
+}
+
+.level {
+    background:#1e293b;
+    padding:15px;
+    margin:10px;
+    border-radius:10px;
+    cursor:pointer;
+}
+.locked { opacity:0.3; }
+
+.setup-wrapper {
+    display:flex;
+    justify-content:center;
+    gap:35px;
+    align-items:flex-start;
+    margin-top:20px;
+    flex-wrap:wrap;
+}
+
+.mode-box {
+    background:#111827;
+    border:1px solid #334155;
+    border-radius:12px;
+    padding:20px;
+    width:420px;
+}
+
+.game-grid {
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:15px;
+}
+
+.select-card {
+    background:#1e293b;
+    border:2px solid #334155;
+    border-radius:10px;
+    padding:15px;
+    cursor:pointer;
+    text-align:left;
+    transition:0.2s;
+    position:relative;
+}
+
+.select-card:hover {
+    transform:scale(1.03);
+}
+
+.select-card.selected {
+    border-color:var(--success);
+    background:#123524;
+}
+
+.select-card.disabled {
+    opacity:0.3;
+    pointer-events:none;
+}
+
+.level-number {
+    position:absolute;
+    top:8px;
+    right:10px;
+    background:var(--success);
+    color:black;
+    font-size:12px;
+    font-weight:bold;
+    padding:3px 7px;
+    border-radius:20px;
+}
+
+.badge {
+    display:inline-block;
+    font-size:11px;
+    padding:4px 8px;
+    border-radius:5px;
+    background:#16a34a;
+    margin-top:5px;
+}
+
+.badge-hard {
+    background:#be123c;
+}
+
+.badge-ultimate {
+    background:#f59e0b;
+    color:black;
+}
+
+.warning {
+    color:var(--danger);
+    margin:15px;
+}
+
+.confirm-btn {
+    margin-top:25px;
+    width:300px;
+    background:var(--success);
+    font-weight:bold;
+}
+
+h2 span {
+    color:var(--primary);
+}
 </style>
 </head>
+
 <body>
 
 <div id="loginBox" class="card">
-    <h2>Login / Register</h2>
+    <h2>Login</h2>
     <input id="email" placeholder="Email"><br>
     <input id="pass" type="password" placeholder="Password"><br>
     <button onclick="login()">Login</button>
@@ -54,37 +168,53 @@ button { padding:10px 20px; background:var(--primary); border:none; border-radiu
 </div>
 
 <div id="app" style="display:none;">
-    <div class="top-right-controls">
-        <button class="mini-btn" onclick="showManual()">📖 Manual</button>
-    </div>
-    
     <div class="header">
-        <div>User: <span id="user" style="color: var(--primary)"></span></div>
-        <div>Credits: <span id="credits" style="color: var(--success)">0</span></div>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+        <div>User: <span id="user"></span></div>
+        <div>Credits: <span id="credits">0</span></div>
+        <button onclick="logout()">Logout</button>
     </div>
 
     <div class="card">
         <input id="code" placeholder="Enter Voucher">
-        <button onclick="redeem()" style="width: 100%;">Redeem</button>
+        <button onclick="redeem()">Redeem</button>
     </div>
-    <div id="games"></div>
-</div>
 
-<div id="selectionModal" class="selection-overlay">
-    <h2>Setup Your Mission</h2>
-    <p>Select your levels. <b>Order of clicking determines level number.</b></p>
-    <p style="color: #f43f5e; font-size: 0.9rem;">⚠️ WARNING: This selection is permanent and cannot be changed after confirmation.</p>
-    
-    <div id="selectionGrid" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-    
-    <button id="saveSelectionBtn" style="margin-top:30px; background:var(--success); width: 280px;" onclick="saveUserSelection()">Confirm Permanent Selection</button>
+    <div id="setupBox" style="display:none;">
+        <h1>Setup Your Mission</h1>
+        <p>Select your levels. <b>Order of clicking determines level number.</b></p>
+        <p class="warning">⚠ WARNING: This selection is permanent and cannot be changed after confirmation.</p>
+
+        <div class="setup-wrapper">
+
+            <div class="mode-box">
+                <h2><span>Original Mode</span><br>Flexible 3–5 Level Games</h2>
+
+                <h3 style="color:#38bdf8;">Step 1: Choose Level 1 then Level 2 (Easy)</h3>
+                <div class="game-grid" id="easyGames"></div>
+
+                <h3 style="color:#ff375f;">Step 2: Choose Level 3 onward (Hard, 1–3 games)</h3>
+                <div class="game-grid" id="hardGames"></div>
+            </div>
+
+            <div class="mode-box">
+                <h2><span>Ultimate Mode</span><br>Only One Game</h2>
+                <div id="ultimateGame"></div>
+            </div>
+
+        </div>
+
+        <button id="confirmBtn" class="confirm-btn" onclick="confirmSelection()" disabled>
+            Confirm Permanent Selection
+        </button>
+    </div>
+
+    <div id="games"></div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
@@ -99,263 +229,413 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const allGames = [
-    { id: "snake", name: "Snake", file: "snake.html", diff: "easy", cost: 100, min: 5 },
-    { id: "miner", name: "Gold Miner", file: "miner.html", diff: "easy", cost: 100, min: 100 },
-    { id: "bricks", name: "Brick Breaker", file: "ball.html", diff: "easy", cost: 100, min: 100 },
-    { id: "1024", name: "1024 Game", file: "1024mg.html", diff: "easy", cost: 100, min: 500 },
-    { id: "mines", name: "Minesweeper", file: "minesweeper.html", diff: "hard", cost: 100, min: 150 },
-    { id: "logic", name: "Logic Survival", file: "logic gate minigame.html", diff: "hard", cost: 100, min: 50 },
-    { id: "24calc", name: "24 Calculation", file: "24Calculation.html", diff: "hard", cost: 100, min: 100 },
-    { id: "stroke", name: "One Stroke", file: "graph_theory.html", diff: "hard", cost: 100, min: 100 },
-    { id: "fishing", name: "Fishing", file: "fishing.html", diff: "hard", cost: 100, min: 100 }
+const easyGamesList = [
+    { name:"Snake", file:"snake.html", difficulty:"easy", cost:100 },
+    { name:"Gold Miner", file:"goldminer.html", difficulty:"easy",cost:100},
+    { name:"Brick Breaker", file:"brickbreaker.html", difficulty:"easy",cost:100},
+    { name:"1024 Game", file:"1024minigame.html", difficulty:"easy",cost:100 }
 ];
 
-let currentSelectedIds = [];
+const hardGamesList = [
+    { name:"Minesweeper", file:"minesweeper.html", difficulty:"hard", cost:100},
+    { name:"Logic Survival", file:"logic.html", difficulty:"hard",cost:100 },
+    { name:"24 Calculation", file:"24calculation.html", difficulty:"hard",cost:100 },
+    { name:"One Stroke", file:"onestroke.html", difficulty:"hard",cost:100 },
+    { name:"Fishing", file:"fishing.html", difficulty:"hard",cost:100 }
+];
+
+const ultimateLevel = {
+    name:"tetris",
+    file:"tetris.html",
+    difficulty:"ultimate",
+    cost: 300
+};
+
+let selectedFiveLevels = [];
+let selectedUltimate = null;
+let finalGames = [];
 
 window.login = () => {
     const e = document.getElementById("email").value;
     const p = document.getElementById("pass").value;
-    signInWithEmailAndPassword(auth,e,p).catch(err => alert(err.message));
+
+    signInWithEmailAndPassword(auth,e,p)
+        .catch(err => alert(err.message));
 };
 
-window.register = async () => {
+window.register = () => {
     const e = document.getElementById("email").value;
     const p = document.getElementById("pass").value;
-    const confirmChoice = confirm("Registration Note: You will be asked to select 5 games. Once confirmed, these games and their level order CANNOT be changed. Do you want to proceed?");
-    if(!confirmChoice) return;
 
-    try {
-        const userCred = await createUserWithEmailAndPassword(auth, e, p);
-        await setDoc(doc(db, "users", userCred.user.uid), {
-            email: e,
-            credits: 0,
-            scores: { unlockedLevel: 1 },
-            selectedGames: [] 
-        });
-        alert("Registration Successful!");
-    } catch(err) { alert(err.message); }
+    createUserWithEmailAndPassword(auth,e,p)
+        .catch(err => alert(err.message));
 };
 
 window.logout = () => signOut(auth);
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if(user){
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("app").style.display = "block";
+
         document.getElementById("user").innerText = user.email;
 
-        const userRef = doc(db, "users", user.uid);
-        onSnapshot(userRef, (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                document.getElementById("credits").innerText = data.credits || 0;
-                
-                if (!data.selectedGames || data.selectedGames.length === 0) {
-                    window.openSelection();
-                } else {
-                    document.getElementById("selectionModal").style.display = "none";
-                    renderSelectedGames(data);
-                }
+        const ref = doc(db,"users",user.uid);
+        const snap = await getDoc(ref);
+
+        let data;
+
+        if(!snap.exists()){
+            data = {
+                email:user.email,
+                credits:0,
+                unlockedLevel:1,
+                scores:{},
+                missionSetup:false,
+                selectedGames:[],
+                playMode:"",
+                purchasedUltimate:false
+            };
+            await setDoc(ref,data);
+        } else {
+            data = snap.data();
+
+            if(data.email === undefined){
+                await updateDoc(ref,{
+                    email:user.email
+                });
+                data.email = user.email;
             }
-        });
+
+            if(data.purchasedUltimate === undefined){
+                await updateDoc(ref,{
+                    purchasedUltimate:false
+                });
+                data.purchasedUltimate = false;
+            }
+        }
+
+        document.getElementById("credits").innerText = data.credits;
+
+        if(!data.missionSetup){
+            document.getElementById("setupBox").style.display = "block";
+            document.getElementById("games").style.display = "none";
+            renderSelection();
+        } else {
+            finalGames = data.selectedGames || [];
+            document.getElementById("setupBox").style.display = "none";
+            document.getElementById("games").style.display = "block";
+            renderGames(data);
+        }
+
     } else {
         document.getElementById("loginBox").style.display = "block";
         document.getElementById("app").style.display = "none";
-        document.getElementById("selectionModal").style.display = "none";
     }
 });
 
-window.openSelection = () => {
-    const mainContainer = document.getElementById("selectionGrid");
-    mainContainer.innerHTML = "";
-    currentSelectedIds = [];
+window.redeem = async () => {
+    const code = document.getElementById("code").value;
 
-    // --- EASY SECTION (Levels 1-2) ---
-    const easyTitle = document.createElement("h3");
-    easyTitle.className = "section-title";
-    easyTitle.innerText = "Step 1: Choose Level 1 then Level 2 (Easy)";
-    mainContainer.appendChild(easyTitle);
+    const coupRef = doc(db,"coupons",code);
+    const snap = await getDoc(coupRef);
 
-    const easyGrid = document.createElement("div");
-    easyGrid.className = "selection-grid";
-    allGames.filter(g => g.diff === 'easy').forEach(game => {
-        easyGrid.appendChild(createSelectCard(game));
+    if(!snap.exists()){
+        alert("Invalid Code");
+        return;
+    }
+
+    const amount = snap.data().amount;
+
+    const userRef = doc(db,"users",auth.currentUser.uid);
+    const userSnap = await getDoc(userRef);
+
+    await updateDoc(userRef,{
+        credits: userSnap.data().credits + amount
     });
-    mainContainer.appendChild(easyGrid);
 
-    // --- HARD SECTION (Levels 3-5) ---
-    const hardTitle = document.createElement("h3");
-    hardTitle.className = "section-title";
-    hardTitle.style.color = "#f43f5e";
-    hardTitle.innerText = "Step 2: Choose Levels 3, 4, then 5 (Hard)";
-    mainContainer.appendChild(hardTitle);
+    await deleteDoc(coupRef);
 
-    const hardGrid = document.createElement("div");
-    hardGrid.className = "selection-grid";
-    allGames.filter(g => g.diff === 'hard').forEach(game => {
-        hardGrid.appendChild(createSelectCard(game));
-    });
-    mainContainer.appendChild(hardGrid);
-
-    document.getElementById("selectionModal").style.display = "flex";
+    alert("Success!");
+    location.reload();
 };
 
-function createSelectCard(game) {
-    const card = document.createElement("div");
-    card.className = "select-card";
-    card.id = "sel-" + game.id;
-    card.innerHTML = `
-        <strong>${game.name}</strong><br>
-        <span class="difficulty-tag ${game.diff === 'easy' ? 'tag-easy' : 'tag-hard'}">
-            ${game.diff.toUpperCase()}
+function renderSelection(){
+    const easyBox = document.getElementById("easyGames");
+    const hardBox = document.getElementById("hardGames");
+    const ultimateBox = document.getElementById("ultimateGame");
+
+    easyBox.innerHTML = "";
+    hardBox.innerHTML = "";
+    ultimateBox.innerHTML = "";
+
+    easyGamesList.forEach(game => {
+        easyBox.appendChild(createFiveLevelCard(game));
+    });
+
+    hardGamesList.forEach(game => {
+        hardBox.appendChild(createFiveLevelCard(game));
+    });
+
+    ultimateBox.appendChild(createUltimateCard(ultimateLevel));
+
+    updateSelectionUI();
+}
+
+function createFiveLevelCard(game){
+    const div = document.createElement("div");
+    div.className = "select-card five-card";
+    div.innerHTML = `
+        <h3>${game.name}</h3>
+        <span class="badge ${game.difficulty === 'hard' ? 'badge-hard' : ''}">
+            ${game.difficulty.toUpperCase()}
         </span>
     `;
 
-    function refreshLockState() {
-        const easySelected = allGames.filter(g =>
-            currentSelectedIds.includes(g.id) && g.diff === 'easy'
-        ).length;
+    div.onclick = () => {
+        const index = selectedFiveLevels.findIndex(g => g.name === game.name);
 
-        if (game.diff === 'hard' && easySelected < 2) {
-            card.classList.add("locked");
-        } else {
-            card.classList.remove("locked");
-        }
-    }
+        if(index >= 0){
+            selectedFiveLevels.splice(index,1);
 
-    card.onclick = () => {
-        const easySelected = allGames.filter(g => currentSelectedIds.includes(g.id) && g.diff === 'easy').length;
-        const hardSelected = allGames.filter(g => currentSelectedIds.includes(g.id) && g.diff === 'hard').length;
+            const easyCount = selectedFiveLevels.filter(g => g.difficulty === "easy").length;
 
-        if (game.diff === 'hard' && easySelected < 2) {
-            alert("You must select at least 2 EASY games first!");
+            if(easyCount < 2){
+                selectedFiveLevels = selectedFiveLevels.filter(g => g.difficulty !== "hard");
+            }
+
+            updateSelectionUI();
             return;
         }
 
-        if (currentSelectedIds.includes(game.id)) {
-            currentSelectedIds = currentSelectedIds.filter(id => id !== game.id);
-            card.classList.remove("selected");
-
-            // added: if easy goes below 2, remove all selected hard games too
-            const easyAfterUnselect = allGames.filter(g =>
-                currentSelectedIds.includes(g.id) && g.diff === 'easy'
-            ).length;
-
-            if (game.diff === 'easy' && easyAfterUnselect < 2) {
-                const removedHardIds = allGames
-                    .filter(g => g.diff === 'hard' && currentSelectedIds.includes(g.id))
-                    .map(g => g.id);
-
-                currentSelectedIds = currentSelectedIds.filter(id => !removedHardIds.includes(id));
-
-                removedHardIds.forEach(id => {
-                    const hardCard = document.getElementById("sel-" + id);
-                    if (hardCard) hardCard.classList.remove("selected");
-                });
-            }
-
-        } else {
-            if (game.diff === 'easy' && easySelected >= 2) {
-                alert("Maximum easy games already selected!");
-                return;
-            } else if (game.diff === 'hard' && hardSelected >= 3) {
-                alert("Maximum hard games already selected!");
-                return;
-            }
-
-            currentSelectedIds.push(game.id);
-            card.classList.add("selected");
+        if(selectedUltimate){
+            selectedUltimate = null;
         }
 
-        document.querySelectorAll(".select-card").forEach(c => {
-            const id = c.id.replace("sel-", "");
-            const g = allGames.find(x => x.id === id);
-            if (!g) return;
+        const easyCount = selectedFiveLevels.filter(g => g.difficulty === "easy").length;
+        const hardCount = selectedFiveLevels.filter(g => g.difficulty === "hard").length;
 
-            const easyNow = allGames.filter(x =>
-                currentSelectedIds.includes(x.id) && x.diff === 'easy'
-            ).length;
-
-            if (g.diff === 'hard' && easyNow < 2) {
-                c.classList.add("locked");
-            } else {
-                c.classList.remove("locked");
+        if(game.difficulty === "easy"){
+            if(easyCount >= 2){
+                alert("You can only choose 2 Easy games.");
+                return;
             }
-        });
+            selectedFiveLevels.push(game);
+        }
+
+        if(game.difficulty === "hard"){
+            if(easyCount < 2){
+                alert("Choose 2 Easy games first.");
+                return;
+            }
+
+            if(hardCount >= 3){
+                alert("You can only choose up to 3 Hard games.");
+                return;
+            }
+
+            selectedFiveLevels.push(game);
+        }
+
+        updateSelectionUI();
     };
 
-    refreshLockState();
-    return card;
+    return div;
 }
 
-window.saveUserSelection = async () => {
-    const selectedGames = allGames.filter(g => currentSelectedIds.includes(g.id));
-    const easyCount = selectedGames.filter(g => g.diff === 'easy').length;
-    const hardCount = selectedGames.filter(g => g.diff === 'hard').length;
+function createUltimateCard(game){
+    const div = document.createElement("div");
+    div.className = "select-card ultimate-card";
+    div.innerHTML = `
+        <h3>${game.name}</h3>
+        <p>Play only one final challenge.</p>
+        <span class="badge badge-ultimate">ULTIMATE</span>
+    `;
 
-    if (easyCount === 2 && hardCount === 3) {
-        const finalConfirm = confirm("Are you absolutely sure? These 5 games and their level order will be PERMANENT for this account.");
-        if(finalConfirm) {
-            const userRef = doc(db, "users", auth.currentUser.uid);
-            await updateDoc(userRef, { selectedGames: currentSelectedIds });
-            document.getElementById("selectionModal").style.display = "none";
+    div.onclick = () => {
+        if(selectedUltimate){
+            selectedUltimate = null;
+            updateSelectionUI();
+            return;
         }
+
+        selectedFiveLevels = [];
+        selectedUltimate = game;
+
+        updateSelectionUI();
+    };
+
+    return div;
+}
+
+function updateSelectionUI(){
+    const fiveCards = document.querySelectorAll(".five-card");
+    const ultimateCards = document.querySelectorAll(".ultimate-card");
+
+    fiveCards.forEach(card => {
+        const name = card.querySelector("h3").innerText;
+        const selectedIndex = selectedFiveLevels.findIndex(g => g.name === name);
+
+        card.classList.toggle("selected", selectedIndex >= 0);
+        card.classList.toggle("disabled", selectedUltimate !== null);
+
+        let oldLabel = card.querySelector(".level-number");
+        if(oldLabel){
+            oldLabel.remove();
+        }
+
+        if(selectedIndex >= 0){
+            const label = document.createElement("div");
+            label.className = "level-number";
+            label.innerText = "Lv " + (selectedIndex + 1);
+            card.appendChild(label);
+        }
+    });
+
+    ultimateCards.forEach(card => {
+        card.classList.toggle("selected", selectedUltimate !== null);
+        card.classList.toggle("disabled", selectedFiveLevels.length > 0);
+
+        let oldLabel = card.querySelector(".level-number");
+        if(oldLabel){
+            oldLabel.remove();
+        }
+
+        if(selectedUltimate){
+            const label = document.createElement("div");
+            label.className = "level-number";
+            label.innerText = "Ultimate";
+            card.appendChild(label);
+        }
+    });
+
+    const confirmBtn = document.getElementById("confirmBtn");
+
+    const easyCount = selectedFiveLevels.filter(g => g.difficulty === "easy").length;
+    const hardCount = selectedFiveLevels.filter(g => g.difficulty === "hard").length;
+
+    if(selectedUltimate){
+        confirmBtn.disabled = false;
+    } else if(easyCount === 2 && hardCount >= 1 && hardCount <= 3){
+        confirmBtn.disabled = false;
     } else {
-        alert(`Invalid Selection!\nYou need 2 Easy and 3 Hard games.\nCurrently: ${easyCount} Easy, ${hardCount} Hard.`);
+        confirmBtn.disabled = true;
     }
+}
+
+window.confirmSelection = async () => {
+    let playMode = "";
+    let selectedGames = [];
+
+    if(selectedUltimate){
+        playMode = "ultimate";
+        selectedGames = [{
+            id:1,
+            name:selectedUltimate.name,
+            file:selectedUltimate.file,
+            cost:300,
+            min:1000
+        }];
+    } else {
+        playMode = "fiveLevel";
+        selectedGames = selectedFiveLevels.map((g,index) => ({
+            id:index + 1,
+            name:g.name,
+            file:g.file,
+            cost:100,
+            min:100
+        }));
+    }
+
+    if(selectedGames.length === 0){
+        alert("Please select your mission.");
+        return;
+    }
+
+    if(!selectedUltimate){
+        const easyCount = selectedFiveLevels.filter(g => g.difficulty === "easy").length;
+        const hardCount = selectedFiveLevels.filter(g => g.difficulty === "hard").length;
+
+        if(easyCount !== 2 || hardCount < 1 || hardCount > 3){
+            alert("Please select 2 Easy games and 1 to 3 Hard games.");
+            return;
+        }
+    }
+
+    const confirmMsg = confirm("Confirm selection? This cannot be changed later.");
+
+    if(!confirmMsg){
+        return;
+    }
+
+    const userRef = doc(db,"users",auth.currentUser.uid);
+
+    await updateDoc(userRef,{
+        missionSetup:true,
+        playMode:playMode,
+        selectedGames:selectedGames,
+        unlockedLevel:1
+    });
+
+    alert("Mission setup completed!");
+    location.reload();
 };
 
-window.showManual = () => {
-    alert("SYSTEM MANUAL:\n1. Level 1-2: Easy Difficulty\n2. Level 3-5: Hard Difficulty\n3. Game selection is permanent upon confirmation.\n4. Each attempt costs 100 Credits.\n5. Beat the target score to unlock the next level.");
-};
-
-function renderSelectedGames(userData) {
+function renderGames(data){
     const container = document.getElementById("games");
     container.innerHTML = "";
 
-    userData.selectedGames.forEach((gameId, index) => {
-        const game = allGames.find(g => g.id === gameId);
-        if(!game) return;
+    const selectedGames = data.selectedGames || [];
 
-        const levelNum = index + 1;
-        const isLocked = levelNum > (userData.scores?.unlockedLevel || 1);
-        
+    selectedGames.forEach(g => {
+        const locked = g.id > data.unlockedLevel;
+
         const div = document.createElement("div");
-        div.className = "level " + (isLocked ? "locked" : "");
+        div.className = "level " + (locked ? "locked" : "");
         div.innerHTML = `
-            <h3>Level ${levelNum}: ${game.name}</h3>
-            <p>${isLocked ? "Locked 🔒" : "Play Now ▶️"}</p>
-            <small style="color: #94a3b8">${game.diff.toUpperCase()} MODE</small>
+            <h3>Level ${g.id}: ${g.name}</h3>
+            <p>${locked ? "Locked" : "Play Now"}</p>
         `;
 
-        if(!isLocked){
+        if(!locked){
             div.onclick = async () => {
-                if(userData.credits < game.cost){
-                    alert("Not enough credits!");
-                    return;
+                const userRef = doc(db,"users",auth.currentUser.uid);
+
+                const isUltimate = data.playMode === "ultimate";
+                const alreadyPaidUltimate = data.purchasedUltimate === true;
+
+                let needPay = true;
+
+                if(isUltimate && alreadyPaidUltimate){
+                    needPay = false;
                 }
-                const userRef = doc(db, "users", auth.currentUser.uid);
-                await updateDoc(userRef, { credits: userData.credits - game.cost });
-                window.location.href = `${game.file}?uid=${auth.currentUser.uid}&id=${levelNum}&min=${game.min}`;
+
+                if(needPay){
+                    if(data.credits < g.cost){
+                        alert("Not enough credits");
+                        return;
+                    }
+
+                    const updateData = {
+                        credits: data.credits - g.cost
+                    };
+
+                    if(isUltimate){
+                        updateData.purchasedUltimate = true;
+                    }
+
+                    await updateDoc(userRef, updateData);
+                }
+
+                window.location.href =
+                    `${g.file}?uid=${auth.currentUser.uid}&id=${g.id}&min=${g.min}`;
             };
         }
+
         container.appendChild(div);
     });
 }
-
-window.redeem = async () => {
-    const code = document.getElementById("code").value;
-    const coupRef = doc(db,"coupons",code);
-    const snap = await getDoc(coupRef);
-    if(!snap.exists()) { alert("Invalid Code"); return; }
-    const amount = snap.data().amount;
-    const userRef = doc(db,"users",auth.currentUser.uid);
-    const userSnap = await getDoc(userRef);
-    await updateDoc(userRef, { credits: (userSnap.data().credits || 0) + amount });
-    await deleteDoc(coupRef);
-    alert("Success!");
-};
 </script>
+
 </body>
 </html>
