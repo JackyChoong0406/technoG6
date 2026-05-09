@@ -6,14 +6,83 @@
 <title>Game Hub</title>
 
 <style>
-:root { --primary:#38bdf8; --bg:#0f172a; --panel:#1e293b; --success:#22c55e; --danger:#ff375f; }
+:root{
+    --primary:#2563eb;
+    --bg:#f8fafc;
+    --panel:#ffffff;
+    --panel2:#e0f2fe;
+    --text:#0f172a;
+    --border:#cbd5e1;
+    --success:#22c55e;
+    --danger:#ef4444;
+}
 
-body {
+body{
     font-family:'Segoe UI';
     background:var(--bg);
-    color:white;
+    color:var(--text);
     text-align:center;
     margin:0;
+    transition:0.3s;
+}
+
+body.dark{
+    --primary:#38bdf8;
+    --bg:#0f172a;
+    --panel:#1e293b;
+    --panel2:#111827;
+    --text:#ffffff;
+    --border:#334155;
+}
+
+body.blue{
+    --primary:#2563eb;
+    --bg:#dbeafe;
+    --panel:#ffffff;
+    --panel2:#bfdbfe;
+    --text:#0f172a;
+    --border:#93c5fd;
+}
+
+body.green{
+    --primary:#16a34a;
+    --bg:#dcfce7;
+    --panel:#ffffff;
+    --panel2:#bbf7d0;
+    --text:#052e16;
+    --border:#86efac;
+}
+
+body.red{
+    --primary:#dc2626;
+    --bg:#fee2e2;
+    --panel:#ffffff;
+    --panel2:#fecaca;
+    --text:#450a0a;
+    --border:#fca5a5;
+}
+
+body.yellow{
+    --primary:#ca8a04;
+    --bg:#fef9c3;
+    --panel:#ffffff;
+    --panel2:#fde68a;
+    --text:#422006;
+    --border:#fcd34d;
+}
+
+.theme-select{
+    position:fixed;
+    top:15px;
+    right:15px;
+    z-index:999;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:var(--panel);
+    color:var(--text);
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    font-weight:bold;
 }
 
 .header {
@@ -21,6 +90,8 @@ body {
     background:var(--panel);
     display:flex;
     justify-content:space-around;
+    align-items:center;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
 .card {
@@ -29,6 +100,7 @@ body {
     border-radius:12px;
     margin:20px auto;
     width:300px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
 }
 
 input {
@@ -36,12 +108,13 @@ input {
     margin:10px;
     width:80%;
     border-radius:8px;
-    border:none;
+    border:1px solid var(--border);
 }
 
 button {
     padding:10px 20px;
     background:var(--primary);
+    color:white;
     border:none;
     border-radius:8px;
     cursor:pointer;
@@ -52,82 +125,101 @@ button:disabled {
     cursor:not-allowed;
 }
 
-.level {
-    background:#1e293b;
-    padding:15px;
-    margin:10px;
-    border-radius:10px;
-    cursor:pointer;
-}
-.locked { opacity:0.3; }
-
-.setup-wrapper {
+.setup-wrapper{
+    width:95%;
+    margin:auto;
     display:flex;
-    justify-content:center;
-    gap:35px;
-    align-items:flex-start;
-    margin-top:20px;
-    flex-wrap:wrap;
+    flex-direction:column;
+    gap:40px;
 }
 
-.mode-box {
-    background:#111827;
-    border:1px solid #334155;
-    border-radius:12px;
-    padding:20px;
-    width:420px;
+.mode-box{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:30px;
+    width:min(1300px,95%);
+    margin:auto;
+    box-shadow:0 10px 25px rgba(0,0,0,0.12);
 }
 
-.game-grid {
+.game-grid{
     display:grid;
-    grid-template-columns:repeat(2, 1fr);
-    gap:15px;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:25px;
+    margin-top:25px;
 }
 
-.select-card {
-    background:#1e293b;
-    border:2px solid #334155;
-    border-radius:10px;
-    padding:15px;
+.select-card{
+    background:var(--panel);
+    border:2px solid var(--border);
+    border-radius:24px;
+    overflow:hidden;
     cursor:pointer;
-    text-align:left;
-    transition:0.2s;
+    transition:0.3s;
     position:relative;
+    box-shadow:0 8px 22px rgba(0,0,0,0.15);
 }
 
-.select-card:hover {
-    transform:scale(1.03);
+.select-card:hover{
+    transform:translateY(-7px) scale(1.02);
 }
 
-.select-card.selected {
+.select-card.selected{
     border-color:var(--success);
-    background:#123524;
+    box-shadow:0 0 20px rgba(34,197,94,0.45);
 }
 
-.select-card.disabled {
+.select-card.disabled{
     opacity:0.3;
     pointer-events:none;
 }
 
+.game-img{
+    width:100%;
+    height:190px;
+    object-fit:cover;
+    display:block;
+}
+
+.card-content{
+    padding:20px;
+    text-align:left;
+}
+
+.card-content h3{
+    margin:0;
+    font-size:25px;
+}
+
+.card-content p{
+    margin-top:10px;
+    opacity:0.8;
+    font-size:15px;
+}
+
 .level-number {
     position:absolute;
-    top:8px;
-    right:10px;
+    top:12px;
+    right:12px;
     background:var(--success);
     color:black;
     font-size:12px;
     font-weight:bold;
-    padding:3px 7px;
+    padding:5px 10px;
     border-radius:20px;
+    z-index:2;
 }
 
 .badge {
     display:inline-block;
     font-size:11px;
-    padding:4px 8px;
-    border-radius:5px;
+    padding:5px 10px;
+    border-radius:6px;
     background:#16a34a;
-    margin-top:5px;
+    color:white;
+    margin-top:14px;
+    font-weight:bold;
 }
 
 .badge-hard {
@@ -148,16 +240,140 @@ button:disabled {
     margin-top:25px;
     width:300px;
     background:var(--success);
+    color:white;
     font-weight:bold;
 }
 
 h2 span {
     color:var(--primary);
 }
+
+/* PLAY LEVEL GRID */
+
+.games-grid{
+    width:92%;
+    margin:35px auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:25px;
+}
+
+.level-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:24px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:0.3s;
+    box-shadow:0 8px 22px rgba(0,0,0,0.15);
+    text-align:left;
+}
+
+.level-card:hover{
+    transform:translateY(-7px) scale(1.02);
+}
+
+.level-card.locked{
+    opacity:0.45;
+    cursor:not-allowed;
+}
+
+.level-img{
+    width:100%;
+    height:180px;
+    object-fit:cover;
+    display:block;
+}
+
+.level-content{
+    padding:20px;
+}
+
+.level-content h2{
+    margin:0;
+    color:var(--primary);
+    font-size:18px;
+}
+
+.level-content h3{
+    margin:8px 0 12px;
+    font-size:24px;
+}
+
+.play-text{
+    color:#22c55e;
+    font-weight:bold;
+}
+
+.locked-text{
+    color:#ef4444;
+    font-weight:bold;
+}
+
+@media(max-width:600px){
+    body{
+        padding-bottom:30px;
+    }
+
+    h1{
+        font-size:26px;
+    }
+
+    .card{
+        width:85%;
+    }
+
+    .setup-wrapper{
+        width:100%;
+    }
+
+    .mode-box{
+        width:88%;
+        padding:18px;
+        border-radius:18px;
+    }
+
+    .game-grid,
+    .games-grid{
+        grid-template-columns:1fr;
+        gap:18px;
+    }
+
+    .game-img,
+    .level-img{
+        height:160px;
+    }
+
+    .card-content h3,
+    .level-content h3{
+        font-size:22px;
+    }
+
+    .confirm-btn{
+        width:85%;
+    }
+
+    .theme-select{
+        width:85%;
+        margin-top:15px;
+    }
+
+    input{
+        width:85%;
+    }
+}
 </style>
 </head>
 
 <body>
+
+<select class="theme-select" onchange="changeTheme(this.value)">
+    <option value="blue">💙 Blue</option>
+    <option value="dark">🌙 Dark</option>
+    <option value="green">💚 Green</option>
+    <option value="red">❤️ Red</option>
+    <option value="yellow">💛 Yellow</option>
+</select>
 
 <div id="loginBox" class="card">
     <h2>Login</h2>
@@ -198,7 +414,7 @@ h2 span {
 
             <div class="mode-box">
                 <h2><span>Ultimate Mode</span><br>Only One Game</h2>
-                <div id="ultimateGame"></div>
+                <div class="game-grid" id="ultimateGame"></div>
             </div>
 
         </div>
@@ -230,30 +446,106 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const easyGamesList = [
-    { name:"Snake", file:"snake.html", difficulty:"easy", cost:100 },
-    { name:"Gold Miner", file:"goldminer.html", difficulty:"easy",cost:100},
-    { name:"Brick Breaker", file:"brickbreaker.html", difficulty:"easy",cost:100},
-    { name:"1024 Game", file:"1024minigame.html", difficulty:"easy",cost:100 }
+    {
+        name:"Snake",
+        file:"snake.html",
+        difficulty:"easy",
+        cost:100,
+        image:"images/snake.jpg"
+    },
+    {
+        name:"Gold Miner",
+        file:"goldminer.html",
+        difficulty:"easy",
+        cost:100,
+        image:"images/goldminer.jpg"
+    },
+    {
+        name:"Brick Breaker",
+        file:"brickbreaker.html",
+        difficulty:"easy",
+        cost:100,
+        image:"images/brickbreaker.jpg"
+    },
+    {
+        name:"1024 Game",
+        file:"1024minigame.html",
+        difficulty:"easy",
+        cost:100,
+        image:"images/1024.jpg"
+    }
 ];
 
 const hardGamesList = [
-    { name:"Minesweeper", file:"minesweeper.html", difficulty:"hard", cost:100},
-    { name:"Logic Survival", file:"logic.html", difficulty:"hard",cost:100 },
-    { name:"24 Calculation", file:"24calculation.html", difficulty:"hard",cost:100 },
-    { name:"One Stroke", file:"onestroke.html", difficulty:"hard",cost:100 },
-    { name:"Fishing", file:"fishing.html", difficulty:"hard",cost:100 }
+    {
+        name:"Minesweeper",
+        file:"minesweeper.html",
+        difficulty:"hard",
+        cost:100,
+        image:"images/minesweeper.jpg"
+    },
+    {
+        name:"Logic Survival",
+        file:"logic.html",
+        difficulty:"hard",
+        cost:100,
+        image:"images/logic.jpg"
+    },
+    {
+        name:"24 Calculation",
+        file:"24calculation.html",
+        difficulty:"hard",
+        cost:100,
+        image:"images/24calc.jpg"
+    },
+    {
+        name:"One Stroke",
+        file:"onestroke.html",
+        difficulty:"hard",
+        cost:100,
+        image:"images/onestroke.jpg"
+    },
+    {
+        name:"Fishing",
+        file:"fishing.html",
+        difficulty:"hard",
+        cost:100,
+        image:"images/fishing.jpg"
+    }
 ];
 
 const ultimateLevel = {
-    name:"tetris",
+    name:"Tetris",
     file:"tetris.html",
     difficulty:"ultimate",
-    cost: 300
+    cost:300,
+    image:"images/tetris.jpg"
 };
 
 let selectedFiveLevels = [];
 let selectedUltimate = null;
 let finalGames = [];
+
+function applyTheme(theme){
+    document.body.classList.remove(
+        "dark",
+        "blue",
+        "green",
+        "red",
+        "yellow"
+    );
+
+    document.body.classList.add(theme);
+    localStorage.setItem("theme", theme);
+    document.querySelector(".theme-select").value = theme;
+}
+
+window.changeTheme = (theme) => {
+    applyTheme(theme);
+};
+
+const savedTheme = localStorage.getItem("theme") || "blue";
+applyTheme(savedTheme);
 
 window.login = () => {
     const e = document.getElementById("email").value;
@@ -385,11 +677,18 @@ function renderSelection(){
 function createFiveLevelCard(game){
     const div = document.createElement("div");
     div.className = "select-card five-card";
+
     div.innerHTML = `
-        <h3>${game.name}</h3>
-        <span class="badge ${game.difficulty === 'hard' ? 'badge-hard' : ''}">
-            ${game.difficulty.toUpperCase()}
-        </span>
+        <img src="${game.image}" class="game-img" alt="${game.name}">
+
+        <div class="card-content">
+            <h3>${game.name}</h3>
+            <p>Cost: ${game.cost} Credits</p>
+
+            <span class="badge ${game.difficulty === 'hard' ? 'badge-hard' : ''}">
+                ${game.difficulty.toUpperCase()}
+            </span>
+        </div>
     `;
 
     div.onclick = () => {
@@ -446,10 +745,18 @@ function createFiveLevelCard(game){
 function createUltimateCard(game){
     const div = document.createElement("div");
     div.className = "select-card ultimate-card";
+
     div.innerHTML = `
-        <h3>${game.name}</h3>
-        <p>Play only one final challenge.</p>
-        <span class="badge badge-ultimate">ULTIMATE</span>
+        <img src="${game.image}" class="game-img" alt="${game.name}">
+
+        <div class="card-content">
+            <h3>${game.name}</h3>
+            <p>Ultimate Final Challenge</p>
+
+            <span class="badge badge-ultimate">
+                ULTIMATE
+            </span>
+        </div>
     `;
 
     div.onclick = () => {
@@ -585,16 +892,34 @@ function renderGames(data){
     const container = document.getElementById("games");
     container.innerHTML = "";
 
+    const grid = document.createElement("div");
+    grid.className = "games-grid";
+
     const selectedGames = data.selectedGames || [];
 
     selectedGames.forEach(g => {
         const locked = g.id > data.unlockedLevel;
 
+        const originalGame =
+            [...easyGamesList, ...hardGamesList, ultimateLevel]
+            .find(x => x.name === g.name);
+
+        const image = originalGame?.image || "images/default.jpg";
+
         const div = document.createElement("div");
-        div.className = "level " + (locked ? "locked" : "");
+        div.className = "level-card " + (locked ? "locked" : "");
+
         div.innerHTML = `
-            <h3>Level ${g.id}: ${g.name}</h3>
-            <p>${locked ? "Locked" : "Play Now"}</p>
+            <img src="${image}" class="level-img" alt="${g.name}">
+
+            <div class="level-content">
+                <h2>Level ${g.id}</h2>
+                <h3>${g.name}</h3>
+
+                <p class="${locked ? 'locked-text' : 'play-text'}">
+                    ${locked ? "🔒 Locked" : "▶ Play Now"}
+                </p>
+            </div>
         `;
 
         if(!locked){
@@ -632,8 +957,10 @@ function renderGames(data){
             };
         }
 
-        container.appendChild(div);
+        grid.appendChild(div);
     });
+
+    container.appendChild(grid);
 }
 </script>
 
