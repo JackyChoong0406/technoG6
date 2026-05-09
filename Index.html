@@ -89,15 +89,17 @@ body.yellow{
     padding:20px;
     background:var(--panel);
     display:flex;
-    justify-content:space-around;
+    justify-content:center;
     align-items:center;
+    gap:35px;
+    flex-wrap:wrap;
     box-shadow:0 2px 10px rgba(0,0,0,0.08);
 }
 
 .card {
     background:var(--panel);
     padding:20px;
-    border-radius:12px;
+    border-radius:18px;
     margin:20px auto;
     width:300px;
     box-shadow:0 4px 12px rgba(0,0,0,0.08);
@@ -118,6 +120,7 @@ button {
     border:none;
     border-radius:8px;
     cursor:pointer;
+    font-weight:bold;
 }
 
 button:disabled {
@@ -234,6 +237,7 @@ button:disabled {
 .warning {
     color:var(--danger);
     margin:15px;
+    font-size:18px;
 }
 
 .confirm-btn {
@@ -247,8 +251,6 @@ button:disabled {
 h2 span {
     color:var(--primary);
 }
-
-/* PLAY LEVEL GRID */
 
 .games-grid{
     width:92%;
@@ -324,11 +326,12 @@ h2 span {
     }
 
     h1{
-        font-size:26px;
+        font-size:30px;
     }
 
     .card{
         width:88%;
+        padding:22px;
     }
 
     .setup-wrapper{
@@ -336,7 +339,7 @@ h2 span {
     }
 
     .mode-box{
-        width:90%;
+        width:88%;
         padding:18px;
         border-radius:18px;
     }
@@ -364,8 +367,6 @@ h2 span {
     input{
         width:88%;
     }
-
-    /* IMPORTANT FIX */
 
     .theme-select{
         position:relative;
@@ -402,6 +403,7 @@ h2 span {
     <div class="header">
         <div>User: <span id="user"></span></div>
         <div>Credits: <span id="credits">0</span></div>
+        <button onclick="window.location.href='topup.html'">Top Up</button>
         <button onclick="logout()">Logout</button>
     </div>
 
@@ -444,8 +446,27 @@ h2 span {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    onAuthStateChanged,
+    signOut
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import {
+    getFirestore,
+    doc,
+    getDoc,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    collection,
+    query,
+    where,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
@@ -540,6 +561,7 @@ const ultimateLevel = {
 let selectedFiveLevels = [];
 let selectedUltimate = null;
 let finalGames = [];
+let topupListenerStarted = false;
 
 function applyTheme(theme){
     document.body.classList.remove(
@@ -586,6 +608,11 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById("app").style.display = "block";
 
         document.getElementById("user").innerText = user.email;
+
+        if(!topupListenerStarted){
+            listenApprovedTopup(user.uid);
+            topupListenerStarted = true;
+        }
 
         const ref = doc(db,"users",user.uid);
         const snap = await getDoc(ref);
@@ -638,11 +665,17 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         document.getElementById("loginBox").style.display = "block";
         document.getElementById("app").style.display = "none";
+        topupListenerStarted = false;
     }
 });
 
 window.redeem = async () => {
-    const code = document.getElementById("code").value;
+    const code = document.getElementById("code").value.trim();
+
+    if(!code){
+        alert("Please enter voucher code.");
+        return;
+    }
 
     const coupRef = doc(db,"coupons",code);
     const snap = await getDoc(coupRef);
@@ -663,7 +696,7 @@ window.redeem = async () => {
 
     await deleteDoc(coupRef);
 
-    alert("Success!");
+    alert("Success! Credits added.");
     location.reload();
 };
 
@@ -976,6 +1009,33 @@ function renderGames(data){
     });
 
     container.appendChild(grid);
+}
+
+function listenApprovedTopup(uid){
+    const q = query(
+        collection(db,"topupRequests"),
+        where("uid","==",uid),
+        where("status","==","approved")
+    );
+
+    onSnapshot(q,(snap)=>{
+        snap.forEach(docu=>{
+            const data = docu.data();
+
+            if(data.voucher && !localStorage.getItem("shown_" + docu.id)){
+                localStorage.setItem("shown_" + docu.id,"yes");
+
+                const copyNow = confirm(
+                    "Your top up is approved!\n\nVoucher Code: " + data.voucher + "\n\nPress OK to copy."
+                );
+
+                if(copyNow){
+                    navigator.clipboard.writeText(data.voucher);
+                    alert("Voucher copied. Paste it into Redeem box.");
+                }
+            }
+        });
+    });
 }
 </script>
 
