@@ -926,11 +926,14 @@ window.confirmSelection = async () => {
     const userRef = doc(db,"users",auth.currentUser.uid);
 
     await updateDoc(userRef,{
-        missionSetup:true,
-        playMode:playMode,
-        selectedGames:selectedGames,
+    missionSetup:true,
+    playMode:playMode,
+    selectedGames:selectedGames,
+    unlockedLevel:1,
+    scores:{
         unlockedLevel:1
-    });
+    }
+});
 
     alert("Mission setup completed!");
     location.reload();
@@ -946,7 +949,12 @@ function renderGames(data){
     const selectedGames = data.selectedGames || [];
 
     selectedGames.forEach(g => {
-        const locked = g.id > data.unlockedLevel;
+        const currentUnlocked =
+            data.scores?.unlockedLevel ||
+            data.unlockedLevel ||
+            1;
+        
+        const locked = g.id > currentUnlocked;
 
         const originalGame =
             [...easyGamesList, ...hardGamesList, ultimateLevel]
