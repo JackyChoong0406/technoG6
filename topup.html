@@ -99,6 +99,33 @@ button{
     color:#22c55e;
     font-weight:bold;
 }
+
+#qrBox{
+    display:none;
+    margin:18px auto;
+    background:#020617;
+    padding:18px;
+    border-radius:18px;
+    border:1px solid var(--border);
+}
+
+#qrBox img{
+    width:300px;
+    max-width:100%;
+    border-radius:15px;
+    background:white;
+    padding:10px;
+}
+
+.phone-box{
+    margin-top:12px;
+    background:white;
+    color:black;
+    padding:12px;
+    border-radius:10px;
+    font-weight:bold;
+    font-size:18px;
+}
 </style>
 </head>
 
@@ -114,12 +141,20 @@ button{
     <select id="payment">
         <option value="cash">Cash</option>
         <option value="tng">TNG</option>
+        
     </select>
+    <div id="qrBox">
+        <h3>Scan TNG QR</h3>
+        <img src="tng-qr.png" alt="TNG QR Code">
 
+        <p class="note">Or copy phone number (+60) :</p>
+        <div class="phone-box" id="phoneNumber">169520713</div>
+        <button onclick="copyPhone()">Copy Phone Number</button>
+    </div>
     <br>
 
     <button onclick="submitTopup()">Submit Request</button>
-    <button class="back-btn" onclick="window.location.href='Index.html'">Back</button>
+    <button class="back-btn" onclick="window.location.href='in.html'">Back</button>
 
     <div id="voucherBox">
         <h3>Your Approved Voucher Code</h3>
@@ -164,11 +199,27 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let latestVoucher = "";
+const paymentSelect = document.getElementById("payment");
+const qrBox = document.getElementById("qrBox");
+
+paymentSelect.addEventListener("change", () => {
+    if(paymentSelect.value === "tng"){
+        qrBox.style.display = "block";
+    }else{
+        qrBox.style.display = "none";
+    }
+});
+
+window.copyPhone = () => {
+    const phone = document.getElementById("phoneNumber").innerText;
+    navigator.clipboard.writeText(phone);
+    alert("Phone number copied.");
+};
 
 onAuthStateChanged(auth,(user)=>{
     if(!user){
         alert("Please login first.");
-        window.location.href = "Index.html";
+        window.location.href = "in.html";
         return;
     }
 
@@ -253,6 +304,8 @@ window.copyVoucher = () => {
     navigator.clipboard.writeText(latestVoucher);
     alert("Voucher copied. Go back and redeem it.");
 };
+
+
 </script>
 
 </body>
