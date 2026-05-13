@@ -189,6 +189,29 @@
                 padding:10px 16px;
             }
         }
+        #fullscreenBtn{
+    position:fixed;
+    top:10px;
+    right:10px;
+    z-index:999999;
+    background:#22c55e;
+    color:white;
+    border:none;
+    padding:10px 16px;
+    border-radius:10px;
+    font-weight:bold;
+    font-size:16px;
+    cursor:pointer;
+}
+
+@media (orientation:landscape){
+    #fullscreenBtn{
+        top:8px;
+        right:8px;
+        padding:8px 12px;
+        font-size:14px;
+    }
+}
     </style>
 </head>
 <body>
@@ -196,7 +219,7 @@
     <div id="rotateAlert">
         Please rotate your phone horizontally to play.
     </div>
-
+    <button id="fullscreenBtn">⛶ Full Screen</button>
     <div id="instruction-overlay">
         <div class="instruction-card">
             <h2>GOLD MINER MISSION</h2>
@@ -328,7 +351,23 @@
         const finalScoreText = document.getElementById("final-score-text");
         const resultMessage = document.getElementById("result-message");
         const saveProgressBtn = document.getElementById("saveProgressBtn");
+        const fullscreenBtn = document.getElementById("fullscreenBtn");
 
+fullscreenBtn.addEventListener("click", async () => {
+    const elem = document.documentElement;
+
+    if (!document.fullscreenElement) {
+        if (elem.requestFullscreen) {
+            await elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+});
         let score = 0;
         let timeLeft = 60;
         let gameOver = false;
