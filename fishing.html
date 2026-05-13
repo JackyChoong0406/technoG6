@@ -1062,7 +1062,58 @@ canvas.addEventListener("click", function(event) {
       }
     }
   }
+  // ==========================
+// MOBILE TOUCH CONTROL
+// ==========================
+canvas.addEventListener("touchstart", function(event) {
+  event.preventDefault();
 
+  const rect = canvas.getBoundingClientRect();
+  const touch = event.touches[0];
+
+  const touchX = touch.clientX - rect.left;
+  const touchY = touch.clientY - rect.top;
+
+  spaceHeld = true;
+
+  if (gameState === "rules") {
+    if (
+      touchX >= ruleButton.x &&
+      touchX <= ruleButton.x + ruleButton.w &&
+      touchY >= ruleButton.y &&
+      touchY <= ruleButton.y + ruleButton.h
+    ) {
+      if (rulePage === 0) {
+        rulePage = 1;
+      } else {
+        gameState = "game";
+        resetGame();
+      }
+    }
+  }
+
+  if (gameState === "game") {
+    if (!gameOver && !hookDropped && !reeling) {
+      hookDropped = true;
+    }
+
+    if (gameOver) {
+      if (
+        touchX >= resultButton.x &&
+        touchX <= resultButton.x + resultButton.w &&
+        touchY >= resultButton.y &&
+        touchY <= resultButton.y + resultButton.h
+      ) {
+        finish();
+      }
+    }
+  }
+}, { passive:false });
+
+canvas.addEventListener("touchend", function(event) {
+  event.preventDefault();
+  spaceHeld = false;
+}, { passive:false });
   if (gameState === "game" && gameOver) {
     if (
       mouseX >= resultButton.x &&
