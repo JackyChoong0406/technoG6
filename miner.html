@@ -1,1232 +1,686 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Fishing Tension Game</title>
-<style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Miner: Realistic 2D Edition</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: 'Verdana', sans-serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+        canvas {
+            background-color: #4e342e;
+            border: 4px solid #3e2723;
+            border-radius: 4px;
+            cursor: crosshair;
+            touch-action: none;
+        
+            width: min(95vw, 800px);
+            height: min(65vh, 550px);
+            object-fit: contain;
+        }
+        .ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 2px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+        .ui span { color: #ffd700; }
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            color: #aaa;
+        }
 
- html, body {
-  margin: 0;
-  padding: 0;
-  background: #071427;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-}
+        #quitBtn {
+            position: absolute;
+            bottom: 35px;
+            right: 15px;
+            padding: 10px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 20;
+        }
 
-body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+        #instruction-overlay,
+        #final-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+            box-sizing: border-box;
+        }
 
-canvas {
-  display: block;
-  background: #0b4a75;
-  cursor: pointer;
-  touch-action: none;
+        #final-overlay {
+            display: none;
+        }
 
-  width: min(100vw, 1400px);
-  height: auto;
-  max-height: 100vh;
-}
+        .instruction-card,
+        .final-card {
+            background: #1f2937;
+            border: 2px solid #ffd700;
+            border-radius: 14px;
+            max-width: 420px;
+            width: 100%;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0,0,0,0.6);
+        }
 
-/* PHONE LANDSCAPE */
-@media (max-width: 900px) and (orientation: landscape) {
-  body {
-    align-items: center;
-    justify-content: center;
-  }
+        .instruction-card h2,
+        .final-card h2 {
+            margin-top: 0;
+            color: #ffd700;
+        }
 
-  canvas {
-    width: 100vw;
-    height: 100vh;
-    object-fit: contain;
-  }
-}
+        .instruction-card ul {
+            text-align: left;
+            line-height: 1.6;
+            color: #ddd;
+            padding-left: 22px;
+        }
 
-/* PHONE PORTRAIT ALERT */
-#rotateAlert {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: #071427;
-  color: white;
-  z-index: 99999;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-size: 30px;
-  font-weight: bold;
-  padding: 30px;
-  box-sizing: border-box;
-}
-}
-</style>
+        .start-btn,
+        .save-btn {
+            background: #22c55e;
+            border: none;
+            padding: 12px 24px;
+            color: white;
+            font-size: 1.05rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        .final-score {
+            font-size: 36px;
+            color: #ffd700;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .final-message {
+            color: #ddd;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+
+        #rotateAlert{
+            display:none;
+            position:fixed;
+            inset:0;
+            background:#071427;
+            color:white;
+            z-index:999999;
+            align-items:center;
+            justify-content:center;
+            text-align:center;
+            font-size:30px;
+            font-weight:bold;
+            padding:30px;
+            box-sizing:border-box;
+        }
+
+        @media (max-width:900px) and (orientation:landscape){
+            body{
+                justify-content:center;
+                align-items:center;
+            }
+
+            #gameContainer{
+                width:100vw;
+                height:100vh;
+                max-width:none;
+                margin:0;
+                box-shadow:none;
+            }
+
+            canvas{
+                width:100vw;
+                height:100vh;
+                border:none;
+                border-radius:0;
+                object-fit:fill;
+            }
+
+            .ui{
+                font-size:22px;
+            }
+
+            #instructions{
+                font-size:14px;
+            }
+
+            #quitBtn{
+                font-size:16px;
+                padding:10px 16px;
+            }
+        }
+    </style>
 </head>
 <body>
-<div id="rotateAlert">
-  Please rotate your phone horizontally to play.
-</div>
-<canvas id="gameCanvas" width="1400" height="800"></canvas>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
-
-// ==========================
-// FIREBASE
-// ==========================
-const firebaseConfig = {
-  apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
-  authDomain: "technoprenuership-4f49d.firebaseapp.com",
-  projectId: "technoprenuership-4f49d",
-  storageBucket: "technoprenuership-4f49d.firebasestorage.app",
-  messagingSenderId: "679400264773",
-  appId: "1:679400264773:web:f27707019e8bf8e9843f2c"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-let currentUser = null;
-let isSaving = false;
-// ==========================
-// PHONE ROTATE CHECK
-// ==========================
-function checkPhoneRotate() {
-  const isPhone = window.innerWidth <= 900;
-  const rotateAlert = document.getElementById("rotateAlert");
-
-  if (isPhone && window.innerHeight > window.innerWidth) {
-    rotateAlert.style.display = "flex";
-    canvas.style.display = "none";
-  } else {
-    rotateAlert.style.display = "none";
-    canvas.style.display = "block";
-  }
-}
-
-window.addEventListener("load", checkPhoneRotate);
-window.addEventListener("resize", checkPhoneRotate);
-window.addEventListener("orientationchange", checkPhoneRotate);
-//
-// ==========================
-// PHONE ROTATE CHECK
-// ==========================
-function checkPhoneRotate() {
-  const isPhone = window.innerWidth <= 900;
-
-  if (isPhone && window.innerHeight > window.innerWidth) {
-    document.getElementById("rotateAlert").style.display = "flex";
-    canvas.style.display = "none";
-  } else {
-    document.getElementById("rotateAlert").style.display = "none";
-    canvas.style.display = "block";
-  }
-}
-
-checkPhoneRotate();
-
-window.addEventListener("resize", checkPhoneRotate);
-window.addEventListener("orientationchange", checkPhoneRotate);
-  //
-  
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    alert("Not logged in!");
-    window.location.href = "Index.html";
-    return;
-  }
-  currentUser = user;
-});
-
-const params = new URLSearchParams(window.location.search);
-const levelId = Number(params.get("id"));
-const minGoal = parseInt(params.get("min")) || 50;
-
-// ==========================
-// IMAGE LOADING
-// ==========================
-const hookImg = new Image();
-hookImg.src = "hook.png";
-
-const iceImg = new Image();
-iceImg.src = "ice.png";
-
-const fishImgs = [
-  "fish1.png",
-  "fish2.png",
-  "fish3.png",
-  "fish4.png"
-].map(src => {
-  const img = new Image();
-  img.src = src;
-  return img;
-});
-
-// ==========================
-// GAME STATE
-// ==========================
-let gameState = "rules";
-let rulePage = 0;
-
-let score = 0;
-let lives = 3;
-
-let objects = [];
-let caughtObj = null;
-
-let hookLength = 80;
-let hookDropped = false;
-let hookReturning = false;
-let angle = 0;
-let angleSpeed = 0.03;
-
-let gameOver = false;
-let passed = false;
-let startTicks = Date.now();
-let totalGameTime = 45;
-let remaining = totalGameTime;
-
-let effectText = "";
-let effectTimer = 0;
-
-let comboText = "";
-let comboTimer = 0;
-
-// ==========================
-// FREEZE SYSTEM
-// ==========================
-let frozen = false;
-let freezeStart = 0;
-let freezeDuration = 5000;
-let totalFrozenTime = 0;
-
-// ==========================
-// TENSION SYSTEM
-// ==========================
-let spaceHeld = false;
-let tension = 50;
-let tensionDir = 1;
-let reeling = false;
-let tensionSuccessTime = 0;
-
-let safeMin = 40;
-let safeMax = 70;
-
-// ==========================
-// BOMB SYSTEM
-// ==========================
-let explosions = [];
-let explosionRadius = 320;
-
-// ==========================
-// RULE BUTTON
-// ==========================
-const ruleButton = {
-  x: WIDTH / 2 - 160,
-  y: 640,
-  w: 320,
-  h: 60
-};
-
-// ==========================
-// RESULT BUTTON
-// ==========================
-const resultButton = {
-  x: WIDTH / 2 - 190,
-  y: 510,
-  w: 380,
-  h: 65
-};
-
-// ==========================
-// OBJECT CLASS
-// ==========================
-class GameObject {
-  constructor(type) {
-    this.type = type;
-    this.caught = false;
-
-    if (type === "fish") {
-      this.image = fishImgs[Math.floor(Math.random() * fishImgs.length)];
-
-      this.width = 130;
-      this.height = 90;
-      this.speed = 2.5;
-      this.score = 5;
-
-      if (this.image.src.includes("fish4.png")) {
-        this.width = 200;
-        this.height = 130;
-        this.score = 10;
-      }
-    }
-
-    if (type === "bomb") {
-      this.width = 70;
-      this.height = 70;
-      this.speed = 2.5;
-      this.score = 0;
-    }
-
-    if (type === "ice") {
-      this.width = 75;
-      this.height = 75;
-      this.speed = 2.5;
-      this.score = 0;
-    }
-
-    this.x = -this.width - Math.random() * 500;
-    this.y = 200 + Math.random() * (HEIGHT - 330);
-    this.dir = 1;
-  }
-
-  move() {
-    if (this.caught) return;
-    if (frozen && this.type === "fish") return;
-
-    this.x += this.speed * this.dir;
-
-    if (this.x > WIDTH + this.width) {
-      this.x = -this.width - Math.random() * 500;
-      this.y = 200 + Math.random() * (HEIGHT - 330);
-    }
-  }
-
-  draw() {
-    ctx.save();
-    ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-
-    if (this.type === "fish") {
-      ctx.scale(-1, 1);
-
-      ctx.drawImage(
-        this.image,
-        -this.width / 2,
-        -this.height / 2,
-        this.width,
-        this.height
-      );
-    }
-
-    if (this.type === "bomb") {
-      drawBomb(-this.width / 2, -this.height / 2, this.width, this.height);
-    }
-
-    if (this.type === "ice") {
-      ctx.drawImage(
-        iceImg,
-        -this.width / 2,
-        -this.height / 2,
-        this.width,
-        this.height
-      );
-    }
-
-    ctx.restore();
-  }
-
-  rect() {
-    return {
-      x: this.x,
-      y: this.y,
-      w: this.width,
-      h: this.height
-    };
-  }
-}
-
-// ==========================
-// CREATE OBJECTS
-// ==========================
-function createObjects() {
-  const arr = [];
-
-  for (let i = 0; i < 8; i++) {
-    arr.push(new GameObject("fish"));
-  }
-
-  for (let i = 0; i < 2; i++) {
-    arr.push(new GameObject("bomb"));
-  }
-
-  for (let i = 0; i < 2; i++) {
-    arr.push(new GameObject("ice"));
-  }
-
-  return arr;
-}
-
-function refillObjects() {
-  while (objects.filter(o => o.type === "fish").length < 8) {
-    objects.push(new GameObject("fish"));
-  }
-
-  while (objects.filter(o => o.type === "bomb").length < 2) {
-    objects.push(new GameObject("bomb"));
-  }
-
-  while (objects.filter(o => o.type === "ice").length < 2) {
-    objects.push(new GameObject("ice"));
-  }
-}
-
-// ==========================
-// RESET
-// ==========================
-function resetGame() {
-  score = 0;
-  lives = 3;
-  passed = false;
-  objects = createObjects();
-
-  caughtObj = null;
-  hookLength = 80;
-  hookDropped = false;
-  hookReturning = false;
-
-  angle = 0;
-  angleSpeed = 0.03;
-
-  gameOver = false;
-  startTicks = Date.now();
-  totalFrozenTime = 0;
-  frozen = false;
-
-  effectText = "";
-  effectTimer = 0;
-
-  comboText = "";
-  comboTimer = 0;
-
-  spaceHeld = false;
-  tension = 50;
-  tensionDir = 1;
-  reeling = false;
-  tensionSuccessTime = 0;
-
-  safeMin = 40;
-  safeMax = 70;
-
-  explosions = [];
-}
-
-// ==========================
-// FIREBASE SAVE
-// ==========================
-async function finish() {
-  if (isSaving) return;
-  isSaving = true;
-
-  if (!currentUser || !levelId) {
-    window.location.href = "Index.html";
-    return;
-  }
-
-  try {
-    const userRef = doc(db, "users", currentUser.uid);
-    const snap = await getDoc(userRef);
-
-    if (snap.exists()) {
-      let d = snap.data();
-      let s = d.scores || {};
-
-      if (!s[levelId] || score > s[levelId]) {
-        s[levelId] = score;
-      }
-
-      let currentUnlocked = Number(s.unlockedLevel || 1);
-
-      if (score >= minGoal && currentUnlocked === levelId) {
-        s.unlockedLevel = levelId + 1;
-      } else {
-        s.unlockedLevel = currentUnlocked;
-      }
-
-      await updateDoc(userRef, { scores: s });
-    }
-  } catch (e) {
-    console.error("Firebase Error:", e);
-  }
-
-  window.location.href = "Index.html";
-}
-
-// ==========================
-// DRAW BACKGROUND
-// ==========================
-function drawOcean() {
-  const gradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-  gradient.addColorStop(0, "#2a9df4");
-  gradient.addColorStop(1, "#023e8a");
-
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-}
-
-// ==========================
-// DRAW BOMB
-// ==========================
-function drawBomb(x, y, w, h) {
-  ctx.fillStyle = "#222";
-
-  ctx.beginPath();
-  ctx.arc(x + w / 2, y + h / 2, w * 0.35, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#ffb703";
-  ctx.lineWidth = 4;
-
-  ctx.beginPath();
-  ctx.moveTo(x + w / 2, y + h * 0.25);
-  ctx.lineTo(x + w * 0.75, y + h * 0.05);
-  ctx.stroke();
-
-  ctx.fillStyle = "#ffb703";
-  ctx.beginPath();
-  ctx.arc(x + w * 0.78, y + h * 0.05, 6, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// ==========================
-// DRAW HOOK
-// ==========================
-function drawHook(hookX, hookY) {
-  ctx.strokeStyle = "white";
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-  ctx.moveTo(WIDTH / 2, 0);
-  ctx.lineTo(hookX, hookY);
-  ctx.stroke();
-
-  ctx.drawImage(hookImg, hookX - 30, hookY - 30, 60, 60);
-}
-
-// ==========================
-// TENSION BAR
-// ==========================
-function drawTensionBar() {
-  const x = 1000;
-  const y = 40;
-  const w = 300;
-  const h = 30;
-
-  ctx.fillStyle = "#ff4d4d";
-  ctx.fillRect(x, y, w, h);
-
-  ctx.fillStyle = "#52ff52";
-  ctx.fillRect(
-    x + safeMin / 100 * w,
-    y,
-    (safeMax - safeMin) / 100 * w,
-    h
-  );
-
-  ctx.fillStyle = "white";
-  ctx.fillRect(x + tension / 100 * w - 4, y - 5, 8, h + 10);
-
-  ctx.strokeStyle = "white";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(x, y, w, h);
-
-  ctx.fillStyle = "white";
-  ctx.font = "22px Arial";
-  ctx.fillText("Tension", x, y + 65);
-
-  ctx.font = "18px Arial";
-  ctx.fillText("Hold / release SPACE", x, y + 90);
-}
-
-// ==========================
-// RANDOM TENSION RANGE
-// ==========================
-function setRandomTensionRange(type) {
-  if (type === "bomb") {
-    safeMin = 40 + Math.random() * 20;
-    safeMax = safeMin + 10;
-  } else if (type === "ice") {
-    safeMin = 35 + Math.random() * 25;
-    safeMax = safeMin + 18;
-  } else {
-    safeMin = 30 + Math.random() * 30;
-    safeMax = safeMin + 25;
-  }
-
-  if (safeMax > 95) {
-    safeMax = 95;
-
-    if (type === "bomb") safeMin = safeMax - 10;
-    else if (type === "ice") safeMin = safeMax - 18;
-    else safeMin = safeMax - 25;
-  }
-}
-
-// ==========================
-// UPDATE TENSION
-// ==========================
-function updateTension() {
-  if (!reeling || !caughtObj) return;
-
-  if (spaceHeld) {
-    tension += 1.2;
-  } else {
-    tension -= 1.0;
-  }
-
-  tension += tensionDir * 0.6;
-
-  if (tension >= 100) {
-    tension = 100;
-    tensionDir = -1;
-  }
-
-  if (tension <= 0) {
-    tension = 0;
-    tensionDir = 1;
-  }
-
-  if (tension >= safeMin && tension <= safeMax) {
-    tensionSuccessTime += 16;
-  } else {
-    tensionSuccessTime -= 25;
-  }
-
-  tensionSuccessTime = Math.max(0, tensionSuccessTime);
-
-  if (tensionSuccessTime >= 1200) {
-    if (caughtObj.type === "fish") {
-      score += caughtObj.score;
-      effectText = `+${caughtObj.score} Score!`;
-
-      objects.splice(objects.indexOf(caughtObj), 1);
-      objects.push(new GameObject("fish"));
-    }
-
-    if (caughtObj.type === "bomb") {
-      triggerExplosion(
-        caughtObj.x + caughtObj.width / 2,
-        caughtObj.y + caughtObj.height / 2
-      );
-    }
-
-    if (caughtObj.type === "ice") {
-      activateFreeze();
-
-      objects.splice(objects.indexOf(caughtObj), 1);
-      objects.push(new GameObject("ice"));
-    }
-
-    effectTimer = Date.now();
-    resetHookAfterCatch();
-    refillObjects();
-  }
-
-  if (tension <= 0 || tension >= 100) {
-    effectText = "Escaped!";
-    effectTimer = Date.now();
-
-    caughtObj.caught = false;
-    resetHookAfterCatch();
-  }
-}
-
-// ==========================
-// FREEZE EFFECT
-// ==========================
-function activateFreeze() {
-  if (!frozen) {
-    frozen = true;
-    freezeStart = Date.now();
-  } else {
-    freezeStart = Date.now();
-  }
-
-  effectText = "ICE! Fish and timer frozen!";
-  effectTimer = Date.now();
-}
-
-function updateFreeze() {
-  if (!frozen) return;
-
-  if (Date.now() - freezeStart >= freezeDuration) {
-    frozen = false;
-    totalFrozenTime += freezeDuration;
-  }
-}
-
-// ==========================
-// CHAIN EXPLOSION
-// ==========================
-function triggerExplosion(originX, originY) {
-  explosions.push({
-    x: originX,
-    y: originY,
-    start: Date.now()
-  });
-
-  let destroyed = 0;
-  let triggeredBombs = [];
-  let triggeredIce = false;
-
-  objects = objects.filter(obj => {
-    const ox = obj.x + obj.width / 2;
-    const oy = obj.y + obj.height / 2;
-    const dist = Math.sqrt((ox - originX) ** 2 + (oy - originY) ** 2);
-
-    if (dist <= explosionRadius) {
-      if (obj === caughtObj) {
-        return false;
-      }
-
-      if (obj.type === "fish") {
-        destroyed++;
-        return false;
-      }
-
-      if (obj.type === "bomb") {
-        triggeredBombs.push({ x: ox, y: oy });
-        return false;
-      }
-
-      if (obj.type === "ice") {
-        triggeredIce = true;
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  if (triggeredIce) {
-    activateFreeze();
-  }
-
-  for (const bomb of triggeredBombs) {
-    setTimeout(() => {
-      triggerExplosion(bomb.x, bomb.y);
-    }, 150);
-  }
-
-  let multiplier = 1;
-
-  if (destroyed >= 3) multiplier = 2;
-  if (destroyed >= 5) multiplier = 3;
-  if (destroyed >= 7) multiplier = 4;
-
-  const gained = destroyed * 3 * multiplier;
-
-  score += gained;
-
-  effectText = `BOOM! +${gained}`;
-  comboText = destroyed > 1
-    ? `${destroyed} Chain Combo x${multiplier}`
-    : triggeredBombs.length > 0
-      ? "Bomb Chain!"
-      : "";
-
-  comboTimer = Date.now();
-  effectTimer = Date.now();
-
-  refillObjects();
-}
-
-// ==========================
-// RESET HOOK
-// ==========================
-function resetHookAfterCatch() {
-  caughtObj = null;
-  reeling = false;
-  hookDropped = false;
-  hookReturning = false;
-  hookLength = 80;
-  tensionSuccessTime = 0;
-  tension = 50;
-}
-
-// ==========================
-// COLLISION
-// ==========================
-function rectsCollide(a, b) {
-  return (
-    a.x < b.x + b.w &&
-    a.x + a.w > b.x &&
-    a.y < b.y + b.h &&
-    a.y + a.h > b.y
-  );
-}
-
-// ==========================
-// TEXT
-// ==========================
-function drawCenteredText(text, y, size = 26, color = "white") {
-  ctx.fillStyle = color;
-  ctx.font = `${size}px Arial`;
-  const w = ctx.measureText(text).width;
-  ctx.fillText(text, WIDTH / 2 - w / 2, y);
-}
-
-// ==========================
-// RULE BUTTON DRAW
-// ==========================
-function drawRuleButton(text) {
-  ctx.fillStyle = "#ffcc00";
-  roundRect(ruleButton.x, ruleButton.y, ruleButton.w, ruleButton.h, 18);
-
-  ctx.strokeStyle = "white";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(ruleButton.x, ruleButton.y, ruleButton.w, ruleButton.h);
-
-  ctx.fillStyle = "#0f1e3c";
-  ctx.font = "30px Arial";
-  const textWidth = ctx.measureText(text).width;
-  ctx.fillText(
-    text,
-    ruleButton.x + ruleButton.w / 2 - textWidth / 2,
-    ruleButton.y + 40
-  );
-}
-
-// ==========================
-// RESULT BUTTON DRAW
-// ==========================
-function drawResultButton() {
-  ctx.fillStyle = "#22c55e";
-  roundRect(resultButton.x, resultButton.y, resultButton.w, resultButton.h, 18);
-
-  ctx.strokeStyle = "white";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(resultButton.x, resultButton.y, resultButton.w, resultButton.h);
-
-  ctx.fillStyle = "white";
-  ctx.font = "28px Arial";
-
-  const text = isSaving ? "Saving..." : "Return to Main Page";
-  const textWidth = ctx.measureText(text).width;
-
-  ctx.fillText(
-    text,
-    resultButton.x + resultButton.w / 2 - textWidth / 2,
-    resultButton.y + 42
-  );
-}
-
-// ==========================
-// RULES
-// ==========================
-function drawRules() {
-  ctx.fillStyle = "#0f1e3c";
-  roundRect(200, 100, 1000, 600, 20);
-
-  drawCenteredText("Fishing Tension Game", 160, 50);
-
-  ctx.fillStyle = "white";
-  ctx.font = "26px Arial";
-
-  if (rulePage === 0) {
-    ctx.fillText("Catch fish using the hook.", 350, 250);
-    ctx.fillText("Fish move from LEFT to RIGHT.", 350, 310);
-    ctx.fillText("Press SPACE to drop the hook.", 350, 370);
-    ctx.fillText("When hooked, hold or release SPACE to control tension.", 350, 430);
-
-    drawRuleButton("NEXT");
-  } else {
-    ctx.save();
-    ctx.translate(410, 255);
-    ctx.scale(-1, 1);
-    ctx.drawImage(fishImgs[0], -60, -45, 120, 90);
-    ctx.restore();
-
-    ctx.fillText("Fish = +5 marks", 530, 270);
-
-    ctx.save();
-    ctx.translate(420, 370);
-    ctx.scale(-1, 1);
-    ctx.drawImage(fishImgs[3], -90, -60, 180, 120);
-    ctx.restore();
-
-    ctx.fillText("Large fish = +10 marks", 530, 370);
-
-    drawBomb(380, 460, 70, 70);
-    ctx.fillText("Bomb = explosion combo + chain", 530, 500);
-
-    ctx.drawImage(iceImg, 375, 550, 80, 80);
-    ctx.fillText("Ice = freeze fish and timer", 530, 600);
-
-    drawRuleButton("START");
-  }
-}
-
-// ==========================
-// ROUND RECT
-// ==========================
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  ctx.fill();
-}
-
-// ==========================
-// EXPLOSION ANIMATION
-// ==========================
-function drawExplosionAnimation() {
-  const duration = 650;
-  const now = Date.now();
-
-  explosions = explosions.filter(explosion => {
-    const progress = (now - explosion.start) / duration;
-
-    if (progress >= 1) {
-      return false;
-    }
-
-    const radius = explosionRadius * progress;
-    const alpha = 1 - progress;
-
-    ctx.strokeStyle = `rgba(255,180,0,${alpha})`;
-    ctx.lineWidth = 8;
-
-    ctx.beginPath();
-    ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = `rgba(255,100,0,${0.35 * alpha})`;
-    ctx.beginPath();
-    ctx.arc(explosion.x, explosion.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    for (let i = 0; i < 14; i++) {
-      const a = (Math.PI * 2 / 14) * i;
-      const sparkX = explosion.x + Math.cos(a) * radius;
-      const sparkY = explosion.y + Math.sin(a) * radius;
-
-      ctx.fillStyle = `rgba(255,230,80,${alpha})`;
-      ctx.beginPath();
-      ctx.arc(sparkX, sparkY, 6, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    return true;
-  });
-}
-
-// ==========================
-// GAME LOOP
-// ==========================
-function gameLoop() {
-  drawOcean();
-
-  if (gameState === "rules") {
-    drawRules();
-    requestAnimationFrame(gameLoop);
-    return;
-  }
-
-  updateFreeze();
-
-  let elapsed;
-
-  if (frozen) {
-    elapsed = (freezeStart - startTicks - totalFrozenTime) / 1000;
-  } else {
-    elapsed = (Date.now() - startTicks - totalFrozenTime) / 1000;
-  }
-
-  remaining = Math.max(0, Math.floor(totalGameTime - elapsed));
-
-  if (score >= minGoal && !gameOver) {
-    passed = true;
-    gameOver = true;
-  }
-
-  if ((remaining <= 0 || lives <= 0) && !gameOver) {
-    passed = false;
-    gameOver = true;
-  }
-
-  if (!gameOver) {
-    if (!hookDropped && !reeling) {
-      angle += angleSpeed;
-
-      if (Math.abs(angle) > 1) {
-        angleSpeed *= -1;
-      }
-    } else if (!reeling) {
-      if (!caughtObj) {
-        if (!hookReturning) {
-          hookLength += 8;
-
-          if (hookLength > HEIGHT) {
-            hookReturning = true;
-          }
-        } else {
-          hookLength -= 10;
+    <div id="rotateAlert">
+        Please rotate your phone horizontally to play.
+    </div>
+
+    <div id="instruction-overlay">
+        <div class="instruction-card">
+            <h2>GOLD MINER MISSION</h2>
+            <ul>
+                <li>Press <b>SPACE</b> or <b>CLICK</b> to launch the hook.</li>
+                <li>Collect gold to increase your score.</li>
+                <li>Rocks give much lower value than gold.</li>
+                <li>You have <b>60 seconds</b> to reach the target score.</li>
+                <li>Reach the target to unlock the next level.</li>
+            </ul>
+            <p>Target Score: <b id="goal-text" style="color:#22c55e;">0</b></p>
+            <button class="start-btn" onclick="startGame()">START GAME</button>
+        </div>
+    </div>
+
+    <div id="final-overlay">
+        <div class="final-card">
+            <h2>MISSION OVER</h2>
+            <p class="final-message">Your final score is:</p>
+            <div class="final-score" id="final-score-text">0</div>
+            <p id="result-message" class="final-message"></p>
+            <button class="save-btn" id="saveProgressBtn">SAVE PROGRESS</button>
+        </div>
+    </div>
+
+    <div id="gameContainer">
+        <div class="ui">
+            <div>Score: <span id="score">0</span></div>
+            <div>Time: <span id="timer">60</span>s</div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="550"></canvas>
+
+        <button id="quitBtn">Quit & Save</button>
+
+        <div id="instructions">Press <b>SPACE</b> or <b>CLICK</b> to launch</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA1fwmPPjNGBw0gGYv6TSWmuZ41aNelzNc",
+            authDomain: "technoprenuership-4f49d.firebaseapp.com",
+            projectId: "technoprenuership-4f49d",
+            storageBucket: "technoprenuership-4f49d.firebasestorage.app",
+            messagingSenderId: "679400264773",
+            appId: "1:679400264773:web:f27707019e8bf8e9843f2c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser = null;
+        let gameStarted = false;
+        let hasFinished = false;
+
+        // ==========================
+        // PHONE ROTATE CHECK
+        // ==========================
+        let rotateAlertShown = false;
+
+        function checkPhoneRotate(){
+            const isPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const rotateAlert = document.getElementById("rotateAlert");
+            const gameContainer = document.getElementById("gameContainer");
+            const instructionOverlay = document.getElementById("instruction-overlay");
+            const finalOverlayElement = document.getElementById("final-overlay");
+
+            if(isPhone && isPortrait){
+                rotateAlert.style.display = "flex";
+                gameContainer.style.display = "none";
+                instructionOverlay.style.display = "none";
+                finalOverlayElement.style.display = "none";
+
+                if(!rotateAlertShown){
+                    rotateAlertShown = true;
+                    setTimeout(() => {
+                        alert("Please rotate your phone horizontally to play.");
+                    }, 300);
+                }
+            }else{
+                rotateAlert.style.display = "none";
+                gameContainer.style.display = "block";
+
+                if(!gameStarted && !gameOver){
+                    instructionOverlay.style.display = "flex";
+                }
+            }
         }
-      }
 
-      if (hookLength < 80) {
-        hookLength = 80;
-        hookDropped = false;
-        hookReturning = false;
-      }
-    }
+        window.addEventListener("load", checkPhoneRotate);
+        window.addEventListener("resize", checkPhoneRotate);
+        window.addEventListener("orientationchange", checkPhoneRotate);
 
-    updateTension();
-  }
 
-  const hookX = Math.floor(WIDTH / 2 + hookLength * Math.sin(angle));
-  const hookY = Math.floor(hookLength * Math.cos(angle));
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                alert("Not logged in!");
+                window.location.href = "Index.html";
+                return;
+            }
+            currentUser = user;
+        });
 
-  drawHook(hookX, hookY);
+        const params = new URLSearchParams(window.location.search);
+        const levelId = params.get('id');
+        const minGoal = parseInt(params.get('min')) || 100;
 
-  const hookRect = {
-    x: hookX - 15,
-    y: hookY - 15,
-    w: 30,
-    h: 30
-  };
+        document.getElementById("goal-text").innerText = minGoal;
 
-  for (const obj of objects) {
-    obj.move();
+        window.startGame = function () {
+            document.getElementById("instruction-overlay").style.display = "none";
+            gameStarted = true;
+        };
 
-    if (obj.caught) {
-      obj.x = hookX - obj.width / 2;
-      obj.y = hookY - obj.height / 2;
-    }
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minerImg = new Image();
+        minerImg.src = "miner.png";
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const quitBtn = document.getElementById("quitBtn");
+        const finalOverlay = document.getElementById("final-overlay");
+        const finalScoreText = document.getElementById("final-score-text");
+        const resultMessage = document.getElementById("result-message");
+        const saveProgressBtn = document.getElementById("saveProgressBtn");
 
-    obj.draw();
+        let score = 0;
+        let timeLeft = 60;
+        let gameOver = false;
+        let finalScreenShown = false;
 
-    if (
-      !gameOver &&
-      rectsCollide(hookRect, obj.rect()) &&
-      hookDropped &&
-      !caughtObj &&
-      !reeling
-    ) {
-      obj.caught = true;
-      caughtObj = obj;
-      reeling = true;
-      tension = 50;
-      tensionSuccessTime = 0;
-      setRandomTensionRange(obj.type);
+        const hook = {
+            x: canvas.width / 2,
+            y: 90,
+            angle: 0,
+            angleSpeed: 0.02,
+            length: 40,
+            baseLength: 40,
+            maxLength: 560,
+            state: 'swinging',
+            speed: 7,
+            target: null,
+            minAngle: -Math.PI / 2 + 0.1,
+            maxAngle: Math.PI / 2 - 0.1
+        };
 
-      if (obj.type === "bomb") effectText = "Bomb hooked!";
-      else if (obj.type === "ice") effectText = "Ice hooked!";
-      else effectText = "Fish hooked!";
+        let items = [];
+        const itemTypes = {
+            SMALL_GOLD: { radius: 12, value: 10,  weight: 9, type: 'gold' },
+            MED_GOLD:   { radius: 25, value: 20, weight: 5, type: 'gold' },
+            LARG_GOLD:  { radius: 40, value: 50, weight: 2, type: 'gold' },
+            ROCK:       { radius: 22, value: 2,  weight: 3, type: 'rock' }
+        };
 
-      effectTimer = Date.now();
-    }
-  }
+        function generateIrregularShape(radius, points = 8) {
+            let shape = [];
+            for (let i = 0; i < points; i++) {
+                let angle = (i / points) * Math.PI * 2;
+                let distortion = 0.7 + Math.random() * 0.3;
+                shape.push({
+                    x: Math.cos(angle) * radius * distortion,
+                    y: Math.sin(angle) * radius * distortion
+                });
+            }
+            return shape;
+        }
 
-  drawExplosionAnimation();
+        function initItems() {
+            items = [];
+            const types = Object.values(itemTypes);
+            for (let i = 0; i < 12; i++) {
+                let type = types[Math.floor(Math.random() * types.length)];
+                items.push({
+                    x: Math.random() * (canvas.width - 150) + 75,
+                    y: Math.random() * (canvas.height - 220) + 170,
+                    shape: generateIrregularShape(type.radius, type.type === 'gold' ? 10 : 6),
+                    ...type
+                });
+            }
+        }
 
-  ctx.fillStyle = "white";
-  ctx.font = "26px Arial";
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') launchHook();
+        });
 
-  ctx.fillText(`Score: ${score}`, 10, 30);
-  ctx.fillText(`Target: ${minGoal}`, 10, 60);
-  ctx.fillText(`Time: ${remaining}`, 10, 90);
-  ctx.fillText(`Lives: ${lives}`, 10, 120);
+        canvas.addEventListener('mousedown', launchHook);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            launchHook();
+        }, { passive: false });
 
-  if (frozen) {
-    drawCenteredText("FROZEN!", 150, 45, "#a8f0ff");
-  }
+        quitBtn.addEventListener("click", () => {
+            if (!gameStarted || gameOver) return;
 
-  if (reeling) {
-    drawTensionBar();
-    drawCenteredText(
-      `Catch Progress: ${Math.floor(tensionSuccessTime / 12)}%`,
-      150,
-      28,
-      "yellow"
-    );
-  }
+            gameOver = true;
+            showFinalScoreScreen();
+        });
 
-  if (effectText) {
-    if (Date.now() - effectTimer < 1500) {
-      drawCenteredText(effectText, 210, 45, "yellow");
-    } else {
-      effectText = "";
-    }
-  }
+        saveProgressBtn.addEventListener("click", () => {
+            saveProgressBtn.disabled = true;
+            saveProgressBtn.innerText = "SAVING...";
+            finish();
+        });
 
-  if (comboText) {
-    if (Date.now() - comboTimer < 1800) {
-      drawCenteredText(comboText, 265, 42, "#ffdd00");
-    } else {
-      comboText = "";
-    }
-  }
+        function launchHook() {
+            if (!gameStarted) return;
 
-  if (gameOver) {
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            if (hook.state === 'swinging' && !gameOver) {
+                hook.state = 'extending';
+            }
+        }
 
-    if (passed) {
-      drawCenteredText("LEVEL PASSED!", 250, 60, "#22c55e");
-    } else {
-      drawCenteredText("GAME OVER", 250, 60, "#ff5555");
-    }
+        function showFinalScoreScreen() {
+            if (finalScreenShown) return;
+            finalScreenShown = true;
 
-    drawCenteredText(`Final Score: ${score}`, 330, 36);
-    drawCenteredText(`Target Score: ${minGoal}`, 380, 30);
+            finalScoreText.innerText = score;
 
-    if (passed) {
-      drawCenteredText("Next level will be unlocked.", 430, 28, "#ffffff");
-    } else {
-      drawCenteredText("Score not enough to unlock next level.", 430, 28, "#ffffff");
-    }
+            if (score >= minGoal) {
+                resultMessage.innerHTML = "Target reached! Next level will be unlocked after saving.";
+                resultMessage.style.color = "#22c55e";
+            } else {
+                resultMessage.innerHTML = "Target not reached. Your best score will still be saved.";
+                resultMessage.style.color = "#f87171";
+            }
 
-    drawResultButton();
-  }
+            finalOverlay.style.display = "flex";
+        }
 
-  requestAnimationFrame(gameLoop);
-}
+        async function finish() {
+            if (hasFinished) return;
+            hasFinished = true;
 
-// ==========================
-// KEYBOARD CONTROL
-// ==========================
-document.addEventListener("keydown", function(event) {
-  if (event.code === "Space") {
-    spaceHeld = true;
-    event.preventDefault();
-  }
+            if (!currentUser || !levelId) {
+                window.location.href = 'Index.html';
+                return;
+            }
 
-  if (gameState === "game") {
-    if (!gameOver) {
-      if (event.code === "Space" && !hookDropped && !reeling) {
-        hookDropped = true;
-      }
-    }
-  }
-});
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                const snap = await getDoc(userRef);
 
-document.addEventListener("keyup", function(event) {
-  if (event.code === "Space") {
-    spaceHeld = false;
-  }
-});
+                if (snap.exists()) {
+                    let d = snap.data();
+                    let s = d.scores || {};
 
-// ==========================
-// MOUSE CONTROL
-// ==========================
-canvas.addEventListener("click", function(event) {
-  const rect = canvas.getBoundingClientRect();
+                    if (!s[levelId] || score > s[levelId]) {
+                        s[levelId] = score;
+                    }
 
-  const scaleX = WIDTH / rect.width;
-  const scaleY = HEIGHT / rect.height;
+                    let currentUnlocked = Number(s.unlockedLevel || 1);
 
-  const mouseX = (event.clientX - rect.left) * scaleX;
-  const mouseY = (event.clientY - rect.top) * scaleY;
+                    if (score >= minGoal && currentUnlocked === Number(levelId)) {
+                        s.unlockedLevel = Number(levelId) + 1;
+                    }
 
-  if (gameState === "rules") {
-    if (
-      mouseX >= ruleButton.x &&
-      mouseX <= ruleButton.x + ruleButton.w &&
-      mouseY >= ruleButton.y &&
-      mouseY <= ruleButton.y + ruleButton.h
-    ) {
-      if (rulePage === 0) {
-        rulePage = 1;
-      } else {
-        gameState = "game";
-        resetGame();
-      }
-    }
-  }
+                    await updateDoc(userRef, { scores: s });
+                }
+            } catch (e) {
+                console.error("Firebase Error:", e);
+            }
 
-  if (gameState === "game" && gameOver) {
-    if (
-      mouseX >= resultButton.x &&
-      mouseX <= resultButton.x + resultButton.w &&
-      mouseY >= resultButton.y &&
-      mouseY <= resultButton.y + resultButton.h
-    ) {
-      finish();
-    }
-  }
-});
+            window.location.href = "Index.html";
+        }
 
-// ==========================
-// MOBILE TOUCH CONTROL
-// ==========================
-canvas.addEventListener("touchstart", function(event) {
-  event.preventDefault();
+        function update() {
+            if (gameOver || !gameStarted) return;
 
-  const rect = canvas.getBoundingClientRect();
-  const touch = event.touches[0];
+            if (hook.state === 'swinging') {
+                hook.angle += hook.angleSpeed;
+                if (hook.angle > hook.maxAngle || hook.angle < hook.minAngle) {
+                    hook.angleSpeed *= -1;
+                }
+            } 
+            else if (hook.state === 'extending') {
+                hook.length += hook.speed;
+                const hx = hook.x + Math.sin(hook.angle) * hook.length;
+                const hy = hook.y + Math.cos(hook.angle) * hook.length;
 
-  const scaleX = WIDTH / rect.width;
-  const scaleY = HEIGHT / rect.height;
+                if (hx < 0 || hx > canvas.width || hy > canvas.height || hook.length > hook.maxLength) {
+                    hook.state = 'retracting';
+                }
 
-  const touchX = (touch.clientX - rect.left) * scaleX;
-  const touchY = (touch.clientY - rect.top) * scaleY;
+                items.forEach((item, index) => {
+                    if (Math.hypot(hx - item.x, hy - item.y) < item.radius) {
+                        hook.target = item;
+                        items.splice(index, 1);
+                        hook.state = 'retracting';
+                    }
+                });
+            } 
+            else if (hook.state === 'retracting') {
+                let pullSpeed = hook.target ? (hook.speed * (hook.target.weight / 10)) : hook.speed;
+                hook.length -= pullSpeed;
 
-  spaceHeld = true;
+                if (hook.length <= hook.baseLength) {
+                    hook.length = hook.baseLength;
+                    hook.state = 'swinging';
+                    if (hook.target) {
+                        score += hook.target.value;
+                        scoreElement.innerText = score;
+                        hook.target = null;
+                    if (items.length === 0) {
+                     initItems();
+                    }
+                    }
+                }
+            }
+        }
 
-  if (gameState === "rules") {
-    if (
-      touchX >= ruleButton.x &&
-      touchX <= ruleButton.x + ruleButton.w &&
-      touchY >= ruleButton.y &&
-      touchY <= ruleButton.y + ruleButton.h
-    ) {
-      if (rulePage === 0) {
-        rulePage = 1;
-      } else {
-        gameState = "game";
-        resetGame();
-      }
-    }
-  }
+        function drawIrregularPath(ctx, item) {
+            ctx.beginPath();
+            ctx.moveTo(item.x + item.shape[0].x, item.y + item.shape[0].y);
+            for (let i = 1; i < item.shape.length; i++) {
+                ctx.lineTo(item.x + item.shape[i].x, item.y + item.shape[i].y);
+            }
+            ctx.closePath();
+        }
 
-  if (gameState === "game") {
-    if (!gameOver && !hookDropped && !reeling) {
-      hookDropped = true;
-    }
+        function drawGold(ctx, item) {
+            ctx.save();
 
-    if (gameOver) {
-      if (
-        touchX >= resultButton.x &&
-        touchX <= resultButton.x + resultButton.w &&
-        touchY >= resultButton.y &&
-        touchY <= resultButton.y + resultButton.h
-      ) {
-        finish();
-      }
-    }
-  }
-}, { passive:false });
+            ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+            ctx.shadowBlur = 15;
 
-canvas.addEventListener("touchend", function(event) {
-  event.preventDefault();
-  spaceHeld = false;
-}, { passive:false });
+            drawIrregularPath(ctx, item);
 
-objects = createObjects();
-gameLoop();
-</script>
+            let gradient = ctx.createRadialGradient(
+                item.x - item.radius/3, item.y - item.radius/3, 0,
+                item.x, item.y, item.radius
+            );
+            gradient.addColorStop(0, '#fff3b0');
+            gradient.addColorStop(0.3, '#ffca28');
+            gradient.addColorStop(0.8, '#f57c00');
+            gradient.addColorStop(1, '#81d4fa00');
 
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawRock(ctx, item) {
+            ctx.save();
+
+            drawIrregularPath(ctx, item);
+
+            let gradient = ctx.createLinearGradient(
+                item.x - item.radius, item.y - item.radius,
+                item.x + item.radius, item.y + item.radius
+            );
+            gradient.addColorStop(0, '#9e9e9e');
+            gradient.addColorStop(0.5, '#616161');
+            gradient.addColorStop(1, '#212121');
+
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            ctx.strokeStyle = '#424242';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(item.x - item.radius/2, item.y);
+            ctx.lineTo(item.x + item.radius/3, item.y + item.radius/3);
+            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawBackgroundTexture() {
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            for(let i = 0; i < 500; i++) {
+                let x = Math.random() * canvas.width;
+                let y = Math.random() * (canvas.height - 70) + 70;
+                let size = Math.random() * 3;
+                ctx.fillRect(x, y, size, size);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#4e342e';
+            ctx.fillRect(0, 90, canvas.width, canvas.height);
+            drawBackgroundTexture();
+
+            ctx.fillStyle = '#a7ffeb';
+            ctx.fillRect(0, 0, canvas.width, 90);
+
+            const minerWidth = 100;
+            const minerHeight = 120;
+
+            // draw miner image centered above hook
+            ctx.drawImage(
+                minerImg,
+                hook.x - minerWidth / 2,
+                -5,
+                minerWidth,
+                minerHeight
+            );
+
+            const hx = hook.x + Math.sin(hook.angle) * hook.length;
+            const hy = hook.y + Math.cos(hook.angle) * hook.length;
+
+            ctx.strokeStyle = '#d7ccc8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(hook.x, hook.y);
+            ctx.lineTo(hx, hy);
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(hx, hy);
+            ctx.rotate(-hook.angle);
+            ctx.strokeStyle = '#9e9e9e';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0,0); ctx.quadraticCurveTo(-10, 10, -5, 20);
+            ctx.moveTo(0,0); ctx.quadraticCurveTo(10, 10, 5, 20);
+            ctx.stroke();
+            ctx.restore();
+
+            items.forEach(item => {
+                if (item.type === 'gold') drawGold(ctx, item);
+                else drawRock(ctx, item);
+            });
+
+            if (hook.target) {
+                let caughtItem = {...hook.target, x: hx, y: hy};
+                if (caughtItem.type === 'gold') drawGold(ctx, caughtItem);
+                else drawRock(ctx, caughtItem);
+            }
+        }
+
+        const timerInterval = setInterval(() => {
+            if (!gameOver && gameStarted) {
+                timeLeft--;
+                timerElement.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    gameOver = true;
+                    showFinalScoreScreen();
+                }
+            }
+        }, 1000);
+
+        function resetGame() {
+            score = 0;
+            timeLeft = 60;
+            scoreElement.innerText = score;
+            timerElement.innerText = timeLeft;
+            gameOver = false;
+            hasFinished = false;
+            finalScreenShown = false;
+            finalOverlay.style.display = "none";
+            saveProgressBtn.disabled = false;
+            saveProgressBtn.innerText = "SAVE PROGRESS";
+            hook.length = hook.baseLength;
+            hook.state = 'swinging';
+            hook.target = null;
+            initItems();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        initItems();
+        gameLoop();
+    </script>
 </body>
 </html>
