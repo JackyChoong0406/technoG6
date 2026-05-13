@@ -70,7 +70,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get('uid');
 const levelId = urlParams.get('id');
 const levelNum = parseInt(levelId, 10);
-const minGoal = parseInt(urlParams.get('min')) || 5; 
+const minGoal = 5; 
 
 document.getElementById('goal-text').innerText = minGoal;
 document.getElementById('ui-goal').innerText = minGoal;
