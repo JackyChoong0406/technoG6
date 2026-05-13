@@ -987,6 +987,15 @@ function renderGames(data){
 
                 let needPay = true;
 
+                const passedScore =
+                    data.scores?.[g.id] || 0;
+                
+                /* If already passed min goal, no need pay again */
+                if(passedScore >= g.min){
+                    needPay = false;
+                }
+                
+                /* Ultimate mode purchased once only */
                 if(isUltimate && alreadyPaidUltimate){
                     needPay = false;
                 }
