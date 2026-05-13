@@ -5,59 +5,68 @@
 <title>Fishing Tension Game</title>
 <style>
 
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #071427;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-  }
+ html, body {
+  margin: 0;
+  padding: 0;
+  background: #071427;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
 
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  display: block;
+  background: #0b4a75;
+  cursor: pointer;
+  touch-action: none;
+
+  width: min(100vw, 1400px);
+  height: auto;
+  max-height: 100vh;
+}
+
+/* PHONE LANDSCAPE */
+@media (max-width: 900px) and (orientation: landscape) {
   body {
-    display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
   }
 
   canvas {
-    display: block;
-    background: #0b4a75;
-    cursor: pointer;
-    touch-action: none;
-
     width: 100vw;
-    height: auto;
-    max-height: 100vh;
+    height: 100vh;
+    object-fit: contain;
   }
+}
 
-  @media (max-width: 600px) {
-    canvas {
-      width: 100vw;
-      height: 57vw;
-      max-height: 100vh;
-    }
-  }
-  #rotateAlert {
+/* PHONE PORTRAIT ALERT */
+#rotateAlert {
   display: none;
 }
 
-@media (max-width: 700px) and (orientation: portrait) {
+@media (max-width: 900px) and (orientation: portrait) {
   #rotateAlert {
     display: flex;
     position: fixed;
     inset: 0;
     background: #071427;
     color: white;
-    z-index: 9999;
+    z-index: 99999;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 26px;
+    font-size: 30px;
     font-weight: bold;
     padding: 30px;
+    box-sizing: border-box;
   }
 
   canvas {
@@ -102,6 +111,28 @@ const auth = getAuth(app);
 let currentUser = null;
 let isSaving = false;
 
+//
+// ==========================
+// PHONE ROTATE CHECK
+// ==========================
+function checkPhoneRotate() {
+  const isPhone = window.innerWidth <= 900;
+
+  if (isPhone && window.innerHeight > window.innerWidth) {
+    document.getElementById("rotateAlert").style.display = "flex";
+    canvas.style.display = "none";
+  } else {
+    document.getElementById("rotateAlert").style.display = "none";
+    canvas.style.display = "block";
+  }
+}
+
+checkPhoneRotate();
+
+window.addEventListener("resize", checkPhoneRotate);
+window.addEventListener("orientationchange", checkPhoneRotate);
+  //
+  
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     alert("Not logged in!");
