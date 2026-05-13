@@ -56,12 +56,14 @@ canvas {
   padding: 30px;
   box-sizing: border-box;
 }
+  #fullscreenBtn{ position: fixed; top: 10px; right: 10px; z-index: 999999; padding: 10px 18px; border: none; border-radius: 10px; background: #22c55e; color: white; font-size: 18px; font-weight: bold; } 
 </style>
 </head>
 <body>
 <div id="rotateAlert">
   Please rotate your phone horizontally to play.
 </div>
+<button id="fullscreenBtn">Fullscreen</button> 
 <canvas id="gameCanvas" width="1400" height="800"></canvas>
 
 <script type="module">
@@ -71,7 +73,7 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
+const fullscreenBtn = document.getElementById("fullscreenBtn"); fullscreenBtn.addEventListener("click", async () => { try { if (document.documentElement.requestFullscreen) { await document.documentElement.requestFullscreen(); } if (screen.orientation && screen.orientation.lock) { screen.orientation.lock("landscape").catch(()=>{}); } fullscreenBtn.style.display = "none"; } catch (e) { console.log(e); } }); 
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
 
