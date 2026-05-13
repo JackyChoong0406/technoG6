@@ -40,10 +40,36 @@
       max-height: 100vh;
     }
   }
+  #rotateAlert {
+  display: none;
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  #rotateAlert {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    background: #071427;
+    color: white;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    padding: 30px;
+  }
+
+  canvas {
+    display: none;
+  }
+}
 </style>
 </head>
 <body>
-
+<div id="rotateAlert">
+  Please rotate your phone horizontally to play.
+</div>
 <canvas id="gameCanvas" width="1400" height="800"></canvas>
 
 <script type="module">
