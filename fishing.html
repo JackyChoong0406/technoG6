@@ -50,28 +50,19 @@ canvas {
 /* PHONE PORTRAIT ALERT */
 #rotateAlert {
   display: none;
+  position: fixed;
+  inset: 0;
+  background: #071427;
+  color: white;
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 30px;
+  font-weight: bold;
+  padding: 30px;
+  box-sizing: border-box;
 }
-
-@media (max-width: 900px) and (orientation: portrait) {
-  #rotateAlert {
-    display: flex;
-    position: fixed;
-    inset: 0;
-    background: #071427;
-    color: white;
-    z-index: 99999;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    font-size: 30px;
-    font-weight: bold;
-    padding: 30px;
-    box-sizing: border-box;
-  }
-
-  canvas {
-    display: none;
-  }
 }
 </style>
 </head>
@@ -110,7 +101,25 @@ const auth = getAuth(app);
 
 let currentUser = null;
 let isSaving = false;
+// ==========================
+// PHONE ROTATE CHECK
+// ==========================
+function checkPhoneRotate() {
+  const isPhone = window.innerWidth <= 900;
+  const rotateAlert = document.getElementById("rotateAlert");
 
+  if (isPhone && window.innerHeight > window.innerWidth) {
+    rotateAlert.style.display = "flex";
+    canvas.style.display = "none";
+  } else {
+    rotateAlert.style.display = "none";
+    canvas.style.display = "block";
+  }
+}
+
+window.addEventListener("load", checkPhoneRotate);
+window.addEventListener("resize", checkPhoneRotate);
+window.addEventListener("orientationchange", checkPhoneRotate);
 //
 // ==========================
 // PHONE ROTATE CHECK
