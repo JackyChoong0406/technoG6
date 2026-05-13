@@ -63,7 +63,7 @@ canvas {
   padding: 30px;
   box-sizing: border-box;
 }
-}
+
 </style>
 </head>
 <body>
@@ -120,27 +120,7 @@ function checkPhoneRotate() {
 window.addEventListener("load", checkPhoneRotate);
 window.addEventListener("resize", checkPhoneRotate);
 window.addEventListener("orientationchange", checkPhoneRotate);
-//
-// ==========================
-// PHONE ROTATE CHECK
-// ==========================
-function checkPhoneRotate() {
-  const isPhone = window.innerWidth <= 900;
 
-  if (isPhone && window.innerHeight > window.innerWidth) {
-    document.getElementById("rotateAlert").style.display = "flex";
-    canvas.style.display = "none";
-  } else {
-    document.getElementById("rotateAlert").style.display = "none";
-    canvas.style.display = "block";
-  }
-}
-
-checkPhoneRotate();
-
-window.addEventListener("resize", checkPhoneRotate);
-window.addEventListener("orientationchange", checkPhoneRotate);
-  //
   
 onAuthStateChanged(auth, (user) => {
   if (!user) {
