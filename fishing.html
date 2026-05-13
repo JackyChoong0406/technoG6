@@ -1067,8 +1067,12 @@ document.addEventListener("keyup", function(event) {
 // ==========================
 canvas.addEventListener("click", function(event) {
   const rect = canvas.getBoundingClientRect();
-  const mouseX = event.clientX - rect.left;
-  const mouseY = event.clientY - rect.top;
+
+  const scaleX = WIDTH / rect.width;
+  const scaleY = HEIGHT / rect.height;
+
+  const mouseX = (event.clientX - rect.left) * scaleX;
+  const mouseY = (event.clientY - rect.top) * scaleY;
 
   if (gameState === "rules") {
     if (
@@ -1085,7 +1089,20 @@ canvas.addEventListener("click", function(event) {
       }
     }
   }
-  // ==========================
+
+  if (gameState === "game" && gameOver) {
+    if (
+      mouseX >= resultButton.x &&
+      mouseX <= resultButton.x + resultButton.w &&
+      mouseY >= resultButton.y &&
+      mouseY <= resultButton.y + resultButton.h
+    ) {
+      finish();
+    }
+  }
+});
+
+// ==========================
 // MOBILE TOUCH CONTROL
 // ==========================
 canvas.addEventListener("touchstart", function(event) {
@@ -1094,8 +1111,11 @@ canvas.addEventListener("touchstart", function(event) {
   const rect = canvas.getBoundingClientRect();
   const touch = event.touches[0];
 
-  const touchX = touch.clientX - rect.left;
-  const touchY = touch.clientY - rect.top;
+  const scaleX = WIDTH / rect.width;
+  const scaleY = HEIGHT / rect.height;
+
+  const touchX = (touch.clientX - rect.left) * scaleX;
+  const touchY = (touch.clientY - rect.top) * scaleY;
 
   spaceHeld = true;
 
@@ -1137,17 +1157,6 @@ canvas.addEventListener("touchend", function(event) {
   event.preventDefault();
   spaceHeld = false;
 }, { passive:false });
-  if (gameState === "game" && gameOver) {
-    if (
-      mouseX >= resultButton.x &&
-      mouseX <= resultButton.x + resultButton.w &&
-      mouseY >= resultButton.y &&
-      mouseY <= resultButton.y + resultButton.h
-    ) {
-      finish();
-    }
-  }
-});
 
 objects = createObjects();
 gameLoop();
