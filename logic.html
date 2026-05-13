@@ -349,7 +349,7 @@
 
         const params = new URLSearchParams(window.location.search);
         const levelId = params.get('id');
-        const minGoal = parseInt(params.get('min')) || 50;
+        const minGoal = 50;
 
         let state = { A: 0, B: 0, C: 0 };
         let score = 0;
