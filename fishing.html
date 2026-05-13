@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Fishing Tension Game</title>
 <style>
-
- html, body {
+html, body {
   margin: 0;
   padding: 0;
   background: #071427;
@@ -27,19 +27,13 @@ canvas {
   background: #0b4a75;
   cursor: pointer;
   touch-action: none;
-
   width: min(100vw, 1400px);
   height: auto;
   max-height: 100vh;
 }
 
-/* PHONE LANDSCAPE */
+/* Phone landscape: make game fill screen */
 @media (max-width: 900px) and (orientation: landscape) {
-  body {
-    align-items: center;
-    justify-content: center;
-  }
-
   canvas {
     width: 100vw;
     height: 100vh;
@@ -47,7 +41,6 @@ canvas {
   }
 }
 
-/* PHONE PORTRAIT ALERT */
 #rotateAlert {
   display: none;
   position: fixed;
@@ -63,7 +56,6 @@ canvas {
   padding: 30px;
   box-sizing: border-box;
 }
-
 </style>
 </head>
 <body>
@@ -101,27 +93,37 @@ const auth = getAuth(app);
 
 let currentUser = null;
 let isSaving = false;
+
 // ==========================
 // PHONE ROTATE CHECK
 // ==========================
-function checkPhoneRotate() {
-  const isPhone = window.innerWidth <= 900;
-  const rotateAlert = document.getElementById("rotateAlert");
+let rotateAlertShown = false;
 
-  if (isPhone && window.innerHeight > window.innerWidth) {
+function checkPhoneRotate() {
+  const rotateAlert = document.getElementById("rotateAlert");
+  const isSmallDevice = window.matchMedia("(max-width: 900px)").matches;
+  const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+
+  if (isSmallDevice && isPortrait) {
     rotateAlert.style.display = "flex";
     canvas.style.display = "none";
+
+    if (!rotateAlertShown) {
+      rotateAlertShown = true;
+      setTimeout(() => {
+        alert("Please rotate your phone horizontally to play.");
+      }, 300);
+    }
   } else {
     rotateAlert.style.display = "none";
     canvas.style.display = "block";
   }
 }
 
-window.addEventListener("load", checkPhoneRotate);
+checkPhoneRotate();
 window.addEventListener("resize", checkPhoneRotate);
 window.addEventListener("orientationchange", checkPhoneRotate);
 
-  
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     alert("Not logged in!");
